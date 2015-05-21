@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Main</title>
+    <script src="js/jquery-1.11.2.min.js"></script>
+    <script src="js/utility.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/numeral.min.js"></script>
+    <script src="js/jelly/config.js"></script>
+    <script src="js/jelly/app.js"></script>
+    <script>
+        var client = Client.createNew();
+        client.connect();
+        $(window).unload(function () {
+            client.stop();
+        });
+
+    </script>
+</head>
+<body>
+
+</body>
+</html>

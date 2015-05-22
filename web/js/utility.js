@@ -42,7 +42,7 @@ var WebSocketManager = {
             if (typeof(wsm.host) != "undefined") {
                 try {
                     wsm.webSocket = new WebSocket(wsm.host);
-                    wsm.dispatchState();//ÁÙ¥¼³s½u(readyState=0)
+                    wsm.dispatchState();//é‚„æœªé€£ç·š(readyState=0)
                     wsm.webSocket.addEventListener("open", wsm.onOpen, false);
                     wsm.webSocket.addEventListener("message", wsm.onMessage, false);
                     wsm.webSocket.addEventListener("close", wsm.onClose, false);
@@ -57,11 +57,11 @@ var WebSocketManager = {
 
         wsm.onOpen = function (evt) {
             wsm.addLog("onOpen");
-            wsm.dispatchState();//³s½u¦¨¥\(readyState=1)
+            wsm.dispatchState();//é€£ç·šæˆåŠŸ(readyState=1)
         };
 
         wsm.onClose = function (evt) {
-            wsm.dispatchState();//³s½u¤wÃö³¬(readyState=3)
+            wsm.dispatchState();//é€£ç·šå·²é—œé–‰(readyState=3)
             wsm.addLog("close code=" + evt.code + ",reason=" + evt.reason);
         };
 
@@ -86,20 +86,20 @@ var WebSocketManager = {
             wsm.addLog("User closes");
             try {
                 wsm.webSocket.close(1000, "user close manually");
-                wsm.dispatchState();//³s½uÃö³¬¤¤(readyState=2)
+                wsm.dispatchState();//é€£ç·šé—œé–‰ä¸­(readyState=2)
             } catch (exception) {
                 wsm.addLog(exception);
             }
         };
         /**
-         * ±qServerºİ¶Ç¨Óªºdata
+         * å¾Serverç«¯å‚³ä¾†çš„data
          */
         wsm.handleData = function (data) {
             wsm.addLog("receive:" + data);
             $(document).trigger("WebSocketDataEvent", [data]);
         };
         /**
-         * ·í«eªºª¬ºAÅÜ°Ê(readyState)
+         * ç•¶å‰çš„ç‹€æ…‹è®Šå‹•(readyState)
          */
         wsm.dispatchState = function () {
             $(document).trigger("WebSocketStateEvent", [wsm.webSocket.readyState]);
@@ -113,6 +113,20 @@ var WebSocketManager = {
 };
 
 var JsonTool = {
+    copy: function (a, b) {
+        for (var k in a) {
+            if(b.hasOwnProperty(k)){
+                a[k] = b[k];
+            }
+        }
+    },
+    length: function (obj) {
+        var count = 0;
+        for (var key in obj) {
+            count++;
+        }
+        return count;
+    },
     sortString: function (json, property, order) {
         json.sort(function (a, b) {
             if (order == "" || order == "asc") {
@@ -130,6 +144,9 @@ var JsonTool = {
                 return b[property] - a[property];
             }
         });
+    },
+    isInt: function (n) {
+        return Number(n) === n && n % 1 === 0;
     },
     formatFloat: function (num, pos) {
         var size = Math.pow(10, pos);
@@ -197,5 +214,18 @@ function log() {
     } catch (e) {
     }
 }
+function time(msg) {
+    try {
+        console.time(msg);
+    } catch (e) {
+    }
+}
+function timeEnd(msg) {
+    try {
+        console.timeEnd(msg);
+    } catch (e) {
+    }
+}
+
 
 var browserInfo = BrowserInfo.createNew();

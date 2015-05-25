@@ -34,9 +34,10 @@ var BrowserInfo = {
 };
 
 var WebSocketManager = {
-    createNew: function (host) {
+    createNew: function (host, name) {
         var wsm = {};
         wsm.host = host;
+        wsm.name = name;
         wsm.websocket = undefined;
         wsm.connect = function (host) {
             if (typeof(wsm.host) != "undefined") {
@@ -96,17 +97,29 @@ var WebSocketManager = {
          */
         wsm.handleData = function (data) {
             wsm.addLog("receive:" + data);
-            $(document).trigger("WebSocketDataEvent", [data]);
+            wsm.trigger("WebSocketDataEvent", [data]);
         };
         /**
          * 當前的狀態變動(readyState)
          */
         wsm.dispatchState = function () {
-            $(document).trigger("WebSocketStateEvent", [wsm.webSocket.readyState]);
+            wsm.trigger("WebSocketStateEvent", [wsm.webSocket.readyState]);
         };
         wsm.addLog = function (msg) {
-            log(msg);
-            $(document).trigger("WebSocketLogEvent", [msg]);
+            //log(msg);
+            wsm.trigger("WebSocketLogEvent", [msg]);
+        };
+
+        wsm.trigger = function (evtName, parameters) {
+            $(document).trigger(wsm.name + evtName, parameters);
+        };
+
+        wsm.onState = function (onStateFunction) {
+            $(document).on(wsm.name + "WebSocketStateEvent", onStateFunction);
+        };
+
+        wsm.onData = function (onDataFunction) {
+            $(document).on(wsm.name + "WebSocketDataEvent", onDataFunction);
         };
         return wsm;
     }
@@ -115,7 +128,7 @@ var WebSocketManager = {
 var JsonTool = {
     copy: function (a, b) {
         for (var k in a) {
-            if(b.hasOwnProperty(k)){
+            if (b.hasOwnProperty(k)) {
                 a[k] = b[k];
             }
         }

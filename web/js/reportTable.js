@@ -32,9 +32,9 @@ var ReportDataManager = {
         };
 
         rdm.updateRowData = function (index, rowData) {
-            JsonTool.copy(rdm.dataSource[index],rowData);
+            //JsonTool.copy(rdm.dataSource[index],rowData);
             //rdm.dataSource = rdm.dataSource.splice(index,1,rowData);
-            rdm.allocateData();
+            //rdm.allocateData();
             rdm.refreshRow(index);
         };
 

@@ -3,6 +3,8 @@
  */
 var config = {
     quoteWsUrl: "ws://122.152.162.81:10890/websocket",
+    kChartWsUrl: "ws://122.152.162.81:10891/websocket",
+    kChartMin1: "min1",
     getBoardRequest: function (code, mid) {
         return '{"srv":"QUOTE","tr":"5003","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"es":"G|' + code + '"}}';
     },
@@ -12,6 +14,50 @@ var config = {
     getBoardUnRegisterRequest: function (code, mid) {
         return '{"srv":"QUOTE","tr":"5002","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"tp":"RT,RQ","es":"G|' + code + '"}}';
     },
+    getKChartRequest: function (code, mid, date, type) {
+        return '{"srv":"TICK","tr":"1002","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"' + code + '","tp":"' + type + '","td":"' + date + '","nt":5}}';
+    },
+    calculateBoardData: function (data) {
+        //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
+        data.upDown = data.last - data.preClose;
+        data.upDownPercentage = data.upDown / data.preClose * 100;
+        //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
+    },
+    unZip: function (temp, callbackFun) {
+        var objContentBase64EncodedCompressedBytesInStr = temp['c'].replace('\r\n', '');
+        var objContentCompressedBytesInStr = atob(objContentBase64EncodedCompressedBytesInStr);
+        var decompressedBytes = pako.ungzip(objContentCompressedBytesInStr); // Ungzip it.
+
+        var blob = new Blob([new Uint8Array(decompressedBytes)]); // Store it to blob for FileReader.
+        var fileReader = new FileReader();
+        var L_this = this;
+        fileReader.onload = function (IN_event) {
+            temp['zip'] = '0';
+            temp['c'] = JSON.parse(IN_event.target.result);
+            temp['c'] = temp['c'].replace(/\u0003/g, '\r\n');
+            callbackFun.call(this, temp);
+            //console.log(temp);
+        };
+        fileReader.readAsText(blob);
+    },
+    formatKChartData: function (c, kChartData) {
+        var list = c.split("\r\n");
+        var listCount = list.length;
+        var propertyCount = config.kChartProperties.length;
+        var row = [];
+        var obj = {};
+        for (var i = 0; i < listCount; i++) {
+            if (list[i].length > 0) {
+                row = list[i].split(",");
+                obj = {};
+                for (var j = 0; j < propertyCount; j++) {
+                    obj[config.kChartProperties[j]] = row[j];
+                }
+                kChartData.push(obj);
+            }
+        }
+    },
+    kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
     boardGoods: {
         "6ECC": "歐元期",
         "CLCC": "輕油期",

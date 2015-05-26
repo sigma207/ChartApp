@@ -17,12 +17,6 @@ var config = {
     getKChartRequest: function (code, mid, date, type) {
         return '{"srv":"TICK","tr":"1002","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"' + code + '","tp":"' + type + '","td":"' + date + '","nt":5}}';
     },
-    calculateBoardData: function (data) {
-        //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
-        data.upDown = data.last - data.preClose;
-        data.upDownPercentage = data.upDown / data.preClose * 100;
-        //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
-    },
     unZip: function (temp, callbackFun) {
         var objContentBase64EncodedCompressedBytesInStr = temp['c'].replace('\r\n', '');
         var objContentCompressedBytesInStr = atob(objContentBase64EncodedCompressedBytesInStr);
@@ -58,6 +52,22 @@ var config = {
         }
     },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
+    futureList: [
+        new Future("6ECC", "歐元期", 1.22),
+        new Future("CLCC", "輕油期", 0.4),
+        new Future("GCCC", "黃金期", 0.31),
+        new Future("HSICC", "桓生期", 2.46),
+        //new Future("IFCC", "滬深期", 0.26),
+        new Future("NKCC", "日經期", 0.26),
+        new Future("NQCC", "那斯達", 0.26),
+        //new Future("SICC", "白銀期", 1.22),
+        new Future("TECC", "電子期", 1.13),
+        new Future("TFCC", "金融期", 1.74),
+        new Future("TWCC", "摩台期", 1.2),
+        //new Future("TWICC", "加權指", 1.22),
+        new Future("TXCC", "台指期", 1.06),
+        new Future("YMCC", "道瓊期", 0.25)
+    ],
     boardGoods: {
         "6ECC": "歐元期",
         "CLCC": "輕油期",
@@ -219,3 +229,9 @@ var config = {
         "keyr": "settlementDay"
     }
 };
+
+function Future(code, name, limitPercentage) {
+    this.code = code;
+    this.name = name;
+    this.limitPercentage = limitPercentage;
+}

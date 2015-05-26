@@ -16,14 +16,16 @@ var Client = {
         client.init = function () {
             var bg = undefined;
             client.boardDataTotal = 0;
-            for (var code in config.boardGoods) {
-                bg = new BoardGoods(code, config.boardGoods[code], client.boardDataTotal);
+            for (var i = 0; i < config.futureList.length; i++) {
+                bg = new BoardGoods(config.futureList[i], client.boardDataTotal);
                 bg.boardRequestData = config.getBoardRequest(bg.code, bg.boardMid);
                 bg.boardRegisterRequestData = config.getBoardRegisterRequest(bg.code, bg.boardMid);
                 bg.boardUnRegisterRequestData = config.getBoardUnRegisterRequest(bg.code, bg.boardMid);
                 client.boardGoodsMap[bg.code] = bg;
                 client.boardDataTotal++;
             }
+
+            client.runChartManager = runChartManager.createNew();
 
             client.boardTable = ReportTable.createNew("boardTable");
             client.boardTable.addTdClassRenderer("upDown", client.getBoardUpDownClass);
@@ -39,8 +41,9 @@ var Client = {
             client.quoteWsm.onData(client.onBoardData);
             client.kChartWsm.onState(client.onKChartState);
             client.kChartWsm.onData(client.onKChartData);
-            client.quoteWsm.connect();
+
             client.kChartWsm.connect();
+            client.quoteWsm.connect();
         };
 
         client.stop = function () {
@@ -71,25 +74,19 @@ var Client = {
             if (temp.tp == "p") {//push
                 obj = client.quoteFormat(JSON.parse(temp.c).data);
                 bg = client.boardGoodsMap[obj.code];//with out mid
-                //bg = client.getBoardGoodsByMid(temp.mid);
                 bg.boardPushData = data;
-                JsonTool.copy(client.boardDataList[bg.index], obj);
-                config.calculateBoardData(client.boardDataList[bg.index]);
+                bg.updateBoardObj(obj);
                 client.boardDataManager.updateRowData(bg.index, obj);
             } else if (temp.tp == "s") {
                 if (temp.tr == "5003") {
                     obj = client.quoteFormat(JSON.parse(temp.c).data);
-                    //bg = client.boardGoodsMap[obj.code];
                     bg = client.getBoardGoodsByMid(temp.mid);
-                    bg.boardObj = obj;
-                    obj.name = bg.name;
+                    bg.setBoardObj(obj);
                     bg.boardResponseData = data;
                     //if(error)//錯誤還沒處理
-                    client.addBoardData(obj);
+                    client.addBoardData(bg.boardObj);
                 } else if (temp.tr == "5001") {
                     obj = JSON.parse(temp.c);
-                    //code = client.goodsCodeFormat(obj.es);
-                    //bg = client.boardGoodsMap[code];
                     bg = client.getBoardGoodsByMid(temp.mid);
                     bg.boardRegisterResponseData = data;
                 }
@@ -113,7 +110,6 @@ var Client = {
         client.addBoardData = function (data) {
             //log(data);
             client.boardDataLoaded++;
-            config.calculateBoardData(data);
             client.boardDataList.push(data);
             if (client.boardDataLoaded == client.boardDataTotal) {
                 client.boardDataManager.setDataSource(client.boardDataList);
@@ -151,9 +147,9 @@ var Client = {
         client.onKChartDataLoaded = function (temp) {
             log("onKChartDataLoaded mid=%s", temp.mid);
             var bg = client.getBoardGoodsByMid(temp.mid);
-            bg.kChartData = [];
-            config.formatKChartData(temp.c,bg.kChartData);
-            client.showRunChart(bg.index);
+            bg.boardObj.kChartDataList = [];
+            config.formatKChartData(temp.c, bg.boardObj.kChartDataList);
+            client.runChartManager.show(bg.boardObj);
         };
 
         client.goodsCodeFormat = function (data) {
@@ -216,19 +212,41 @@ var Client = {
             }
         };
 
-        client.showRunChart = function (index) {
-
-        };
-
         client.init();
         return client;
     }
 };
 
-function BoardGoods(code, name, i) {
+var runChartManager = {
+    createNew: function () {
+        var rc = RunChart.createNew(document.getElementById("runChartCanvas"));
+        rc.setDrawStyle(DrawStyle.createNew(rc));
+        //runChart.setDataSource(bg.boardObj, "kChartDataList");
+        rc.show = function (boardObj) {
+            rc.setDataSource(boardObj, "kChartDataList");
+            rc.draw(rc.chartInit);
+        };
+        rc.chartInit = function () {
+            var chart = this;//this = runChart...
+
+            chart.padding(40, 20, 40, 40);
+            chart.init();
+            var area = chart.area;
+            var spaceHeight = area.height / 20;
+
+            var periodAxis = chart.createPeriodAxis("time", 10, 10);
+            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", area.x, area.y, area.height / 5);
+            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
+        };
+        return rc;
+    }
+};
+
+function BoardGoods(future, i) {
     this.index = i;
-    this.code = code;
-    this.name = name;
+    this.code = future.code;
+    this.name = future.name;
+    this.limitPercentage = future.limitPercentage;
     this.boardMid = "boardGoods" + i;
     this.boardRegisterMid = "boardGoodsRegister" + i;
     this.boardRequestData = undefined;
@@ -240,7 +258,27 @@ function BoardGoods(code, name, i) {
     this.boardUnRegisterResponseData = undefined;
     this.kChartResponseData = undefined;
     this.kChartResponseObject = undefined;
-    this.kChartData = [];
     this.boardPushData = undefined;
     this.boardObj = undefined;
+    var bg = this;
+    this.setBoardObj = function (boardObj) {
+        bg.boardObj = boardObj;
+        bg.boardObj.name = bg.name;
+        bg.boardObj.volumeMin = 0;
+        bg.calculate();
+    };
+    this.updateBoardObj = function (obj) {
+        JsonTool.copy(bg.boardObj, obj);
+        //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
+        bg.calculate();
+        //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
+        data.lowLimit = JsonTool.formatFloat(data.preClose * 0.9, data.scale);
+        data.highLimit = JsonTool.formatFloat(data.preClose * 1.1, data.scale);
+    };
+    this.calculate = function () {
+        var data = bg.boardObj;
+        data.upDown = data.last - data.preClose;
+        data.upDownPercentage = data.upDown / data.preClose * 100;
+    }
+
 }

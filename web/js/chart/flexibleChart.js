@@ -167,6 +167,23 @@ var DataDriven = {
     }
 };
 
+var ContextDrawStyle = {
+    createNew: function (ctx) {
+        var cds = {};
+        cds.context = ctx;
+        cds.drawStyleList = [];
+        cds.addDrawStyle = function (drawStyle) {
+            cds.drawStyleList.push(drawStyle);
+        };
+        cds.drawStyle = function (chart, component) {
+            for (var i = 0; i < cds.drawStyleList.length; i++) {
+                cds.drawStyleList.call(cds.context, chart, component);
+            }
+        };
+        return cds;
+    }
+};
+
 var Axis = {
     createNew: function (x, y, length) {
         var axis = {};
@@ -174,6 +191,18 @@ var Axis = {
         axis.y = y;
         axis.length = length;
         axis.column = undefined;
+        axis.contextDrawStyleList = [];
+        axis.addContextDrawStyle = function (ctx) {
+            axis.contextDrawStyleList.push(ContextDrawStyle.createNew(ctx));
+        };
+        axis.addDrawStyle = function (index, drawStyle) {
+            axis.contextDrawStyleList[index].addDrawStyle(drawStyle);
+        };
+        axis.drawContext = function (index,chart) {
+            //for (var i = 0; i < axis.contextDrawStyleList.length; i++) {
+                axis.contextDrawStyleList[index].drawStyle(chart,axis);
+            //}
+        };
         return axis;
     }
 };
@@ -287,7 +316,7 @@ var PeriodAxis = {
             } else {
                 newRange = axis.chart.dataDriven.count;//最大
             }
-            console.log("newRange="+newRange);
+            console.log("newRange=" + newRange);
             if (newRange != axis.displayRange) {
                 if (addValue > 0) {//addValue=1
                     start = axis.startIndex - addValue;//30->29
@@ -370,18 +399,19 @@ var RunChart = {
             var valueAxis;
             for (var i = 0; i < periodAxis.valueAxisList.length; i++) {
                 valueAxis = periodAxis.valueAxisList[i];
-                valueAxis.drawValueAxisData.call(chart, valueAxis);
+                //valueAxis.drawValueAxisData.call(chart, valueAxis);
+                valueAxis.drawContext(1,chart);
             }
         };
 
         chart.drawAxis = function () {
             var periodAxis = chart.periodAxis;
-            //periodAxis.drawPeriodAxisTicks.call(chart, periodAxis);
             var valueAxis;
             for (var i = 0; i < periodAxis.valueAxisList.length; i++) {
                 valueAxis = periodAxis.valueAxisList[i];
-                valueAxis.drawValueAxis.call(chart, valueAxis);
-                valueAxis.drawValueAxisTicks.call(chart, valueAxis);
+                valueAxis.drawContext(0,chart);
+                //valueAxis.drawValueAxis.call(chart, valueAxis);
+                //valueAxis.drawValueAxisTicks.call(chart, valueAxis);
                 //valueAxis.drawValueAxisData.call(chart, valueAxis);
             }
         };
@@ -420,7 +450,7 @@ var RunChart = {
         chart.mouseLayerWheel = function (delta) {
             var periodAxis = chart.periodAxis;
             var start = periodAxis.addDisplayRange(delta);
-            if(start!=-1){
+            if (start != -1) {
                 chart.drawPeriod();
             }
         };

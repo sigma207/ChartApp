@@ -219,15 +219,19 @@ var Client = {
 
 var runChartManager = {
     createNew: function () {
-        var rc = RunChart.createNew(document.getElementById("runChartCanvas"));
-        rc.setDrawStyle(DrawStyle.createNew(rc));
+
+        var cm = {};
+        var chart = RunChart.createNew(document.getElementById("runChartCanvas"));
+        cm.chart = chart;
+
+
         //runChart.setDataSource(bg.boardObj, "kChartDataList");
-        rc.show = function (boardObj) {
-            rc.setDataSource(boardObj, "kChartDataList");
-            rc.draw(rc.chartInit);
+        cm.show = function (boardObj) {
+            chart.setDataSource(boardObj, "kChartDataList");
+            chart.draw();
         };
-        rc.chartInit = function () {
-            var chart = this;//this = runChart...
+
+        cm.init = function () {
 
             chart.padding(40, 20, 40, 40);
             chart.init();
@@ -237,8 +241,13 @@ var runChartManager = {
             var periodAxis = chart.createPeriodAxis("time", 10, 10);
             var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", area.x, area.y, area.height / 5);
             var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
+
+            var drawStyle = DrawStyle.createNew(chart);
         };
-        return rc;
+
+        cm.init();
+
+        return cm;
     }
 };
 

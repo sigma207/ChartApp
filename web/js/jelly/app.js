@@ -155,6 +155,9 @@ var Client = {
             log("onKChartDataLoaded mid=%s", temp.mid);
             var bg = client.getBoardGoodsByMid(temp.mid);
             bg.boardObj.kChartDataList = [];
+            //進來的資料,時間近的在前面
+            //而且不是每秒都有
+            //20150527 資料只有1360筆 時間筆數06:00~05:00為1380筆 差了20筆
             config.formatKChartData(temp.c, bg.boardObj.kChartDataList);
             client.runChartManager.show(bg.boardObj);
         };
@@ -256,7 +259,7 @@ var runChartManager = {
             var spaceHeight = area.height / 20;
 
             var periodAxis = chart.createPeriodAxis("time");
-            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", "scale", area.x, area.y, area.height / 5);
+            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", "scale", area.x, area.y, area.height / 4);
             var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
 
             var drawStyle = DrawStyle.createNew(chart);
@@ -264,9 +267,9 @@ var runChartManager = {
             chart.addLayerDrawFunction(0, drawStyle.drawBackground);
 
             valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
-            valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxisTicks);
+            valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisTicks);
             volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
-            volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxisTicks);
+            volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisTicks);
             valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
             volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
 
@@ -306,7 +309,9 @@ function BoardGoods(future, i) {
         bg.boardObj.volumeMin = 0;
         bg.boardObj.startTime = bg.startTime;
         bg.boardObj.endTime = bg.endTime;
-        log(bg.boardObj.tradeDate);
+        bg.boardObj.lowLimit = JsonTool.formatFloat(bg.boardObj.preClose * 0.99, bg.boardObj.scale);
+        bg.boardObj.highLimit = JsonTool.formatFloat(bg.boardObj.preClose * 1.01, bg.boardObj.scale);
+        //log(bg.boardObj.tradeDate);
         //console.log(moment("20150528060000","YYYYMMDDHHmmss").format("YYYY-MM-DD HH:mm:ss"));
         bg.calculate();
     };
@@ -315,8 +320,7 @@ function BoardGoods(future, i) {
         //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
         bg.calculate();
         //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
-        bg.boardObj.lowLimit = JsonTool.formatFloat(bg.boardObj.preClose * 0.9, bg.boardObj.scale);
-        bg.boardObj.highLimit = JsonTool.formatFloat(bg.boardObj.preClose * 1.1, bg.boardObj.scale);
+
     };
     this.calculate = function () {
         var data = bg.boardObj;

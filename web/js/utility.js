@@ -170,6 +170,13 @@ var JsonTool = {
     },
     randomInt: function (min, max) {
         return Math.floor(Math.random() * (max - min + 1) + min);
+    },
+    numeralFormat: function (decimal) {
+        var digit = "";
+        for (var i = 0; i < decimal; i++) {
+            digit += "0";
+        }
+        return "0,0." + digit;
     }
 };
 

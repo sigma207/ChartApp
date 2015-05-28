@@ -244,7 +244,7 @@ var ValueAxis = {
             axis.valueMax = axis.source[axis.maxColumn];
             axis.valueDistance = axis.valueMax - axis.valueMin;
             axis.valueScale = axis.height / axis.valueDistance;
-            log("valueMin=%s,valueMax=%s,valueDistance=%s",axis.valueMin,axis.valueMax,axis.valueDistance);
+            log("valueMin=%s,valueMax=%s,valueDistance=%s", axis.valueMin, axis.valueMax, axis.valueDistance);
         };
 
         axis.convertY = function (value) {
@@ -253,6 +253,11 @@ var ValueAxis = {
 
         axis.createTicks = function (count) {
             return AxisTicks.createNew(axis, count);
+        };
+
+        axis.getValueDecimal = function () {
+            log("decimal=%s", parseInt(axis.source[axis.decimalColumn]));
+            return parseInt(axis.source[axis.decimalColumn]);
         };
         return axis;
     }
@@ -273,9 +278,9 @@ var TimeTick = {
         tt.tickList = [];
         var time = moment(tt.startTime);
         //tt.tickList.push(time);
-        for(var i=0;i<tt.count;i++){
+        for (var i = 0; i < tt.count; i++) {
             tt.tickList.push(time);
-            time = moment(time).add(1,"minute");
+            time = moment(time).add(1, "minute");
         }
         return tt;
     }
@@ -289,11 +294,15 @@ var PeriodAxis = {
         axis.setTimeTick = function (timeTick) {
             axis.timeTick = timeTick;
             axis.tickStartIndex = 0;
-            axis.tickEndIndex = axis.timeTick.count-1;
-            axis.tickDisplayCount = axis.tickEndIndex - axis.tickStartIndex+1;
+            axis.tickEndIndex = axis.timeTick.count - 1;
+            axis.tickDisplayCount = axis.tickEndIndex - axis.tickStartIndex + 1;
             axis.dataStartIndex = 0;
-            axis.dataEndIndex = axis.chart.dataDriven.count-1;
+            axis.dataEndIndex = axis.chart.dataDriven.count - 1;
             axis.scale = runChart.area.width / (axis.tickDisplayCount );
+
+            log("axis.tickDisplayCount=%s",axis.tickDisplayCount);
+            log("area.width=%s,axis.scale=%s",runChart.area.width,axis.scale);
+            log("area.width*axis.scale=%s",runChart.area.width/axis.scale);
         };
 
         axis.onDataDriven = function () {
@@ -307,7 +316,7 @@ var PeriodAxis = {
         };
 
         axis.createValueAxis = function (column, minColumn, maxColumn, decimalColumn, x, y, height) {
-            var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn,decimalColumn, x, y, height);
+            var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn, decimalColumn, x, y, height);
             axis.valueAxisList.push(valueAxis);
             return valueAxis;
         };
@@ -334,7 +343,7 @@ var PeriodAxis = {
             var valueAxisCount = axis.valueAxisList.length;
             //var timeTick = axis.timeTick;
             for (var tickIndex = 0, dataIndex = axis.dataStartIndex;
-                 tickIndex < axis.tickDisplayCount && dataIndex< axis.chart.dataDriven.count;
+                 tickIndex < axis.tickDisplayCount && dataIndex < axis.chart.dataDriven.count;
                  tickIndex++, dataIndex++) {
                 data = list[dataIndex];
                 data.x = axis.convertX(tickIndex);
@@ -394,7 +403,7 @@ var AxisTicks = {
         axisTick.tickList = [];
         axisTick.addTick = function (value, color) {
             var tick = {};
-            log("addTickValue=%s",value);
+            //log("addTickValue=%s",value);
             tick.value = value;
             tick.color = color || "black";
             axisTick.tickList.push(tick);
@@ -443,7 +452,7 @@ var RunChart = {
         chart.draw = function () {
             chart.layerManager.clearLayer(0);
 
-            chart.drawChartLayer(chart,0);
+            chart.drawChartLayer(chart, 0);
             chart.drawAxis();
             chart.drawPeriod();
         };

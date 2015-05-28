@@ -3,7 +3,7 @@
  */
 var Chart = {
     createNew: function (canvasDom) {
-        var chart = {};
+        var chart = CanvasComponent.createNew();
         chart.canvas = canvasDom;
         //chart.ctx = chart.canvas.getContext("2d");//不需要知道ctx的存在
         chart.PADDING_BOTTOM = 0;
@@ -230,19 +230,21 @@ var AxisY = {
 };
 
 var ValueAxis = {
-    createNew: function (period, column, minColumn, maxColumn, x, y, height) {
+    createNew: function (period, column, minColumn, maxColumn, decimalColumn, x, y, height) {
         var axis = AxisY.createNew(x, y, height);
         axis.period = period;
         axis.column = column;
         axis.minColumn = minColumn;
         axis.maxColumn = maxColumn;
+        axis.decimalColumn = decimalColumn;
 
         axis.onDataDriven = function () {
             axis.source = axis.period.chart.dataDriven.source;
-            axis.valueMin = JsonTool.formatFloat(axis.source[axis.minColumn], 2);
-            axis.valueMax = JsonTool.formatFloat(axis.source[axis.maxColumn], 2);
-            axis.valueDistance = JsonTool.formatFloat(axis.valueMax - axis.valueMin, 2);
+            axis.valueMin = axis.source[axis.minColumn];
+            axis.valueMax = axis.source[axis.maxColumn];
+            axis.valueDistance = axis.valueMax - axis.valueMin;
             axis.valueScale = axis.height / axis.valueDistance;
+            log("valueMin=%s,valueMax=%s,valueDistance=%s",axis.valueMin,axis.valueMax,axis.valueDistance);
         };
 
         axis.convertY = function (value) {
@@ -255,23 +257,57 @@ var ValueAxis = {
         return axis;
     }
 };
+var TickType = {
+    SECOND: 1,
+    MINUTE: 60
+};
+
+var TimeTick = {
+    createNew: function (startTime, endTime, tickType) {
+        var tt = {};
+        tt.startTime = startTime;
+        tt.endTime = endTime;
+        tt.tickType = tickType;
+        tt.timeSeconds = tt.endTime.diff(tt.startTime, "second");
+        tt.count = tt.timeSeconds / tt.tickType;
+        tt.tickList = [];
+        var time = moment(tt.startTime);
+        //tt.tickList.push(time);
+        for(var i=0;i<tt.count;i++){
+            tt.tickList.push(time);
+            time = moment(time).add(1,"minute");
+        }
+        return tt;
+    }
+};
 
 var PeriodAxis = {
-    createNew: function (runChart, displayRange, displayRangeMin) {
+    createNew: function (runChart) {
         var axis = AxisX.createNew(runChart.area.x, runChart.area.y, runChart.area.width);
         axis.chart = runChart;
         axis.valueAxisList = [];
-        axis.displayRange = displayRange;
-        axis.displayRangeMin = displayRangeMin;
-
-        axis.onDataDriven = function () {
-            axis.startIndex = runChart.dataDriven.count - axis.displayRange;
-            axis.endIndex = axis.startIndex + axis.displayRange - 1;
-            axis.scale = runChart.area.width / (axis.displayRange + 1);
+        axis.setTimeTick = function (timeTick) {
+            axis.timeTick = timeTick;
+            axis.tickStartIndex = 0;
+            axis.tickEndIndex = axis.timeTick.count-1;
+            axis.tickDisplayCount = axis.tickEndIndex - axis.tickStartIndex+1;
+            axis.dataStartIndex = 0;
+            axis.dataEndIndex = axis.chart.dataDriven.count-1;
+            axis.scale = runChart.area.width / (axis.tickDisplayCount );
         };
 
-        axis.createValueAxis = function (column, minColumn, maxColumn, x, y, height) {
-            var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn, x, y, height);
+        axis.onDataDriven = function () {
+            //if (axis.displayRange == 0) {
+            //    axis.displayRange = axis.tickCount;
+            //    axis.displayRangeMin = axis.displayRange;
+            //}
+            //axis.startIndex = 0;
+            //axis.endIndex = axis.startIndex + axis.displayRange - 1;
+            //axis.scale = runChart.area.width / (axis.displayRange + 1);
+        };
+
+        axis.createValueAxis = function (column, minColumn, maxColumn, decimalColumn, x, y, height) {
+            var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn,decimalColumn, x, y, height);
             axis.valueAxisList.push(valueAxis);
             return valueAxis;
         };
@@ -296,9 +332,12 @@ var PeriodAxis = {
             var data;
             var valueAxis;
             var valueAxisCount = axis.valueAxisList.length;
-            for (var i = 0, timeIndex = axis.startIndex; i < axis.displayRange; i++, timeIndex++) {
-                data = list[timeIndex];
-                data.x = axis.convertX(i);
+            //var timeTick = axis.timeTick;
+            for (var tickIndex = 0, dataIndex = axis.dataStartIndex;
+                 tickIndex < axis.tickDisplayCount && dataIndex< axis.chart.dataDriven.count;
+                 tickIndex++, dataIndex++) {
+                data = list[dataIndex];
+                data.x = axis.convertX(tickIndex);
                 for (var v = 0; v < valueAxisCount; v++) {
                     valueAxis = axis.valueAxisList[v];
                     data[valueAxis.column + "Y"] = valueAxis.y - valueAxis.convertY(data[valueAxis.column]);
@@ -307,40 +346,40 @@ var PeriodAxis = {
         };
 
         axis.changeDisplayRange = function (startIndex) {
-            axis.startIndex = startIndex;
-            axis.endIndex = axis.startIndex + axis.displayRange - 1;
-            axis.scale = axis.chart.area.width / (axis.displayRange + 1);
+            //axis.startIndex = startIndex;
+            //axis.endIndex = axis.startIndex + axis.displayRange - 1;
+            //axis.scale = axis.chart.area.width / (axis.displayRange + 1);
         };
 
         axis.addDisplayRange = function (addValue) {
-            var newRange = axis.displayRange + (addValue * 2);
-            var start, end;
-            if (newRange <= axis.chart.dataDriven.count) {
-                if (newRange <= axis.displayRangeMin) {
-                    newRange = axis.displayRangeMin;//最小
-                } else {
-                    //範圍內隨便你
-                }
-            } else {
-                newRange = axis.chart.dataDriven.count;//最大
-            }
-            console.log("newRange=" + newRange);
-            if (newRange != axis.displayRange) {
-                if (addValue > 0) {//addValue=1
-                    start = axis.startIndex - addValue;//30->29
-                    end = axis.endIndex + addValue;//39->40
-                } else {//addValue=-1
-                    start = axis.startIndex - addValue;//30->31
-                    end = axis.endIndex + addValue;//39->38
-                }
-            }
-
-            if (start >= 0 && end < axis.chart.dataDriven.count) {
-                axis.displayRange = newRange;
-                axis.changeDisplayRange(start);
-                return start;
-            }
-            return -1;
+            //var newRange = axis.displayRange + (addValue * 2);
+            //var start, end;
+            //if (newRange <= axis.chart.dataDriven.count) {
+            //    if (newRange <= axis.displayRangeMin) {
+            //        newRange = axis.displayRangeMin;//最小
+            //    } else {
+            //        //範圍內隨便你
+            //    }
+            //} else {
+            //    newRange = axis.chart.dataDriven.count;//最大
+            //}
+            //console.log("newRange=" + newRange);
+            //if (newRange != axis.displayRange) {
+            //    if (addValue > 0) {//addValue=1
+            //        start = axis.startIndex - addValue;//30->29
+            //        end = axis.endIndex + addValue;//39->40
+            //    } else {//addValue=-1
+            //        start = axis.startIndex - addValue;//30->31
+            //        end = axis.endIndex + addValue;//39->38
+            //    }
+            //}
+            //
+            //if (start >= 0 && end < axis.chart.dataDriven.count) {
+            //    axis.displayRange = newRange;
+            //    axis.changeDisplayRange(start);
+            //    return start;
+            //}
+            //return -1;
         };
         return axis;
     }
@@ -355,6 +394,7 @@ var AxisTicks = {
         axisTick.tickList = [];
         axisTick.addTick = function (value, color) {
             var tick = {};
+            log("addTickValue=%s",value);
             tick.value = value;
             tick.color = color || "black";
             axisTick.tickList.push(tick);
@@ -394,20 +434,22 @@ var RunChart = {
             }
         };
 
-        chart.createPeriodAxis = function (column, displayRange, displayRangeMin) {
-            chart.periodAxis = PeriodAxis.createNew(chart, displayRange, displayRangeMin);
+        chart.createPeriodAxis = function (column, startTime, endTime, tickType) {
+            chart.periodAxis = PeriodAxis.createNew(chart, startTime, endTime, tickType);
             chart.periodAxis.column = column;
             return chart.periodAxis;
         };
 
         chart.draw = function () {
-            //chart.periodAxis.generateDataLoc();
+            chart.layerManager.clearLayer(0);
+
+            chart.drawChartLayer(chart,0);
             chart.drawAxis();
             chart.drawPeriod();
         };
 
         chart.drawAxis = function () {
-            chart.layerManager.clearLayer(0);
+
             var periodAxis = chart.periodAxis;
             var valueAxis;
             for (var i = 0; i < periodAxis.valueAxisList.length; i++) {
@@ -464,7 +506,7 @@ var RunChart = {
 
         chart.mouseUp = function () {
             chart.mouse.dragging = false;
-            if(chart.mouse.inChartArea){
+            if (chart.mouse.inChartArea) {
                 chart.mouseMove();
             }
         };

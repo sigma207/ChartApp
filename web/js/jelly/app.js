@@ -68,7 +68,7 @@ var Client = {
         };
 
         client.onBoardData = function (evt, data) {
-            log("onBoardData");
+            //log("onBoardData");
             var temp = JSON.parse(data);
             var obj, bg, code;
             if (temp.tp == "p") {//push
@@ -101,8 +101,14 @@ var Client = {
                     var bg = client.getBoardGoodsByMid(temp.mid);
                     bg.kChartResponseData = data;
                     bg.kChartResponseObject = temp;
-                    //config.unGZip.apply(bg,[temp, client.onKChartDataLoaded]);
-                    config.unZip(temp, client.onKChartDataLoaded);
+                    if (temp.error == "1") {
+                        var c = JSON.parse(temp.c);
+                        if (typeof c !== typeof undefined && c.hasOwnProperty("ec")) {
+                            alert(c.ec);
+                        }
+                    } else {
+                        config.unZip(temp, client.onKChartDataLoaded);
+                    }
                 }
             }
         };
@@ -140,7 +146,8 @@ var Client = {
                 }
             }
 
-            bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1);
+            //bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1);
+            bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, "20150527", config.kChartMin1);
             client.kChartWsm.send(bg.kChartRequestData);
         };
 
@@ -224,25 +231,46 @@ var runChartManager = {
         var chart = RunChart.createNew(document.getElementById("runChartCanvas"));
         cm.chart = chart;
 
-
-        //runChart.setDataSource(bg.boardObj, "kChartDataList");
         cm.show = function (boardObj) {
-            chart.setDataSource(boardObj, "kChartDataList");
+            var dataDriven = DataDriven.createNew(chart, boardObj, "kChartDataList");
+            chart.setDataDriven(dataDriven);
+            var today = moment().subtract(1, 'day').format('YYYYMMDD');
+
+            var startTime = moment(today + boardObj.startTime, "YYYYMMDDHHmmss");
+            var endTime = moment(today + boardObj.endTime, "YYYYMMDDHHmmss");
+            if (startTime.isAfter(endTime)) {
+                endTime.add(1, "day");
+            }
+
+            var timeTick = TimeTick.createNew(startTime, endTime, TickType.MINUTE);
+            chart.periodAxis.setTimeTick(timeTick);
+
             chart.draw();
         };
 
         cm.init = function () {
 
-            chart.padding(40, 20, 40, 40);
+            chart.padding(100, 20, 100, 40);
             chart.init();
             var area = chart.area;
             var spaceHeight = area.height / 20;
 
-            var periodAxis = chart.createPeriodAxis("time", 10, 10);
-            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", area.x, area.y, area.height / 5);
-            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
+            var periodAxis = chart.createPeriodAxis("time");
+            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", "scale", area.x, area.y, area.height / 5);
+            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
 
             var drawStyle = DrawStyle.createNew(chart);
+
+            chart.addLayerDrawFunction(0, drawStyle.drawBackground);
+
+            valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
+            valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxisTicks);
+            volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
+            volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxisTicks);
+            valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
+            volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
+
+            periodAxis.addLayerDrawFunction(1, drawStyle.drawPeriodAxisTicks);
         };
 
         cm.init();
@@ -256,6 +284,8 @@ function BoardGoods(future, i) {
     this.code = future.code;
     this.name = future.name;
     this.limitPercentage = future.limitPercentage;
+    this.startTime = future.startTime;
+    this.endTime = future.endTime;
     this.boardMid = "boardGoods" + i;
     this.boardRegisterMid = "boardGoodsRegister" + i;
     this.boardRequestData = undefined;
@@ -274,6 +304,10 @@ function BoardGoods(future, i) {
         bg.boardObj = boardObj;
         bg.boardObj.name = bg.name;
         bg.boardObj.volumeMin = 0;
+        bg.boardObj.startTime = bg.startTime;
+        bg.boardObj.endTime = bg.endTime;
+        log(bg.boardObj.tradeDate);
+        //console.log(moment("20150528060000","YYYYMMDDHHmmss").format("YYYY-MM-DD HH:mm:ss"));
         bg.calculate();
     };
     this.updateBoardObj = function (obj) {
@@ -281,8 +315,8 @@ function BoardGoods(future, i) {
         //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
         bg.calculate();
         //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
-        data.lowLimit = JsonTool.formatFloat(data.preClose * 0.9, data.scale);
-        data.highLimit = JsonTool.formatFloat(data.preClose * 1.1, data.scale);
+        bg.boardObj.lowLimit = JsonTool.formatFloat(bg.boardObj.preClose * 0.9, bg.boardObj.scale);
+        bg.boardObj.highLimit = JsonTool.formatFloat(bg.boardObj.preClose * 1.1, bg.boardObj.scale);
     };
     this.calculate = function () {
         var data = bg.boardObj;

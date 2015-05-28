@@ -53,20 +53,20 @@ var config = {
     },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
     futureList: [
-        new Future("6ECC", "歐元期", 1.22),
-        new Future("CLCC", "輕油期", 0.4),
-        new Future("GCCC", "黃金期", 0.31),
-        new Future("HSICC", "桓生期", 2.46),
+        new Future("6ECC", "歐元期", 1.22,"060000","050000"),
+        new Future("CLCC", "輕油期", 0.4,"060000","040000"),
+        new Future("GCCC", "黃金期", 0.31,"060000","040000"),
+        new Future("HSICC", "桓生期", 2.46,"091500","161500"),
         //new Future("IFCC", "滬深期", 0.26),
-        new Future("NKCC", "日經期", 0.26),
-        new Future("NQCC", "那斯達", 0.26),
+        new Future("NKCC", "日經期", 0.26,"074500","134500"),
+        new Future("NQCC", "那斯達", 0.26,"060000","040000"),
         //new Future("SICC", "白銀期", 1.22),
-        new Future("TECC", "電子期", 1.13),
-        new Future("TFCC", "金融期", 1.74),
-        new Future("TWCC", "摩台期", 1.2),
+        new Future("TECC", "電子期", 1.13,"084500","134500"),
+        new Future("TFCC", "金融期", 1.74,"084500","134500"),
+        new Future("TWCC", "摩台期", 1.2,"084500","134500"),
         //new Future("TWICC", "加權指", 1.22),
-        new Future("TXCC", "台指期", 1.06),
-        new Future("YMCC", "道瓊期", 0.25)
+        new Future("TXCC", "台指期", 1.06,"084500","134500"),
+        new Future("YMCC", "道瓊期", 0.25,"060000","050000")
     ],
     boardGoods: {
         "6ECC": "歐元期",
@@ -230,8 +230,10 @@ var config = {
     }
 };
 
-function Future(code, name, limitPercentage) {
+function Future(code, name, limitPercentage, startTime, endTime) {
     this.code = code;
     this.name = name;
     this.limitPercentage = limitPercentage;
+    this.startTime = startTime;
+    this.endTime = endTime;
 }

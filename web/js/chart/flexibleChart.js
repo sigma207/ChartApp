@@ -155,9 +155,17 @@ var ChartMouse = {
             canvas.mousewheel(mouse.onMouseWheel);
         };
 
+        mouse.windowToCanvas = function (x, y) {
+            var bbox =  mouse.layer.canvas.getBoundingClientRect();
+            return {
+                x: x - bbox.left,
+                y: y - bbox.top
+            };
+        };
+
         mouse.onMouseMove = function (e) {
             e.preventDefault();
-            var temp = chart.windowToCanvas(e.clientX, e.clientY);
+            var temp = mouse.windowToCanvas(e.clientX, e.clientY);
             mouse.x = temp.x;
             mouse.y = temp.y;
             if (typeof mouse.onMoveCall !== typeof undefined) {
@@ -244,7 +252,9 @@ var ValueAxis = {
             axis.valueMax = axis.source[axis.maxColumn];
             axis.valueDistance = axis.valueMax - axis.valueMin;
             axis.valueScale = axis.height / axis.valueDistance;
-            log("valueMin=%s,valueMax=%s,valueDistance=%s", axis.valueMin, axis.valueMax, axis.valueDistance);
+            log("valueMin=%s,valueMax=%s,valueDistance=%s,valueScale=%s", axis.valueMin, axis.valueMax, axis.valueDistance, axis.valueScale);
+            log("area.height=%s,axis.scale=%s",axis.height,axis.valueScale);
+            log("area.valueDistance*axis.scale=%s",axis.valueDistance*axis.valueScale);
         };
 
         axis.convertY = function (value) {
@@ -256,7 +266,6 @@ var ValueAxis = {
         };
 
         axis.getValueDecimal = function () {
-            log("decimal=%s", parseInt(axis.source[axis.decimalColumn]));
             return parseInt(axis.source[axis.decimalColumn]);
         };
         return axis;
@@ -276,20 +285,28 @@ var TimeTick = {
         tt.timeSeconds = tt.endTime.diff(tt.startTime, "second");
         tt.count = tt.timeSeconds / tt.tickType;
         tt.tickList = [];
+        tt.tickMap = {};
         var time = moment(tt.startTime);
-        //tt.tickList.push(time);
+        logTime("timeTick");
         for (var i = 0; i < tt.count; i++) {
             tt.tickList.push(time);
+            tt.tickMap[time.format("YYYYMMDDHHmm")] = i;
             time = moment(time).add(1, "minute");
         }
+        logTimeEnd("timeTick");
+        log(tt.tickMap);
+        tt.getTimeTickIndex = function (time) {
+            return tt.tickMap[time];
+        };
         return tt;
     }
 };
 
 var PeriodAxis = {
-    createNew: function (runChart) {
+    createNew: function (runChart,dataTimeFunction) {
         var axis = AxisX.createNew(runChart.area.x, runChart.area.y, runChart.area.width);
         axis.chart = runChart;
+        axis.dataTimeFunction = dataTimeFunction;
         axis.valueAxisList = [];
         axis.setTimeTick = function (timeTick) {
             axis.timeTick = timeTick;
@@ -341,12 +358,13 @@ var PeriodAxis = {
             var data;
             var valueAxis;
             var valueAxisCount = axis.valueAxisList.length;
-            //var timeTick = axis.timeTick;
-            for (var tickIndex = 0, dataIndex = axis.dataStartIndex;
-                 tickIndex < axis.tickDisplayCount && dataIndex < axis.chart.dataDriven.count;
-                 tickIndex++, dataIndex++) {
+            var y;
+            var timeTick = axis.timeTick;
+            var dataTime;
+            for (var dataIndex = axis.dataStartIndex;dataIndex<=axis.dataEndIndex;dataIndex++){
                 data = list[dataIndex];
-                data.x = axis.convertX(tickIndex);
+                dataTime = axis.dataTimeFunction.call(axis,data);
+                data.x = axis.convertX(timeTick.getTimeTickIndex(dataTime));
                 for (var v = 0; v < valueAxisCount; v++) {
                     valueAxis = axis.valueAxisList[v];
                     data[valueAxis.column + "Y"] = valueAxis.y - valueAxis.convertY(data[valueAxis.column]);
@@ -443,8 +461,8 @@ var RunChart = {
             }
         };
 
-        chart.createPeriodAxis = function (column, startTime, endTime, tickType) {
-            chart.periodAxis = PeriodAxis.createNew(chart, startTime, endTime, tickType);
+        chart.createPeriodAxis = function (column,dataTimeFunction) {
+            chart.periodAxis = PeriodAxis.createNew(chart,dataTimeFunction);
             chart.periodAxis.column = column;
             return chart.periodAxis;
         };
@@ -510,6 +528,7 @@ var RunChart = {
         };
 
         chart.mouseOut = function () {
+            chart.layerManager.clearLayer(2);
             chart.mouse.dragging = false;
         };
 

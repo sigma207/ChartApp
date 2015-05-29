@@ -68,7 +68,7 @@ var ReportDataManager = {
         };
 
         rdm.allocateData = function () {
-            time("allocateData");
+            logTime("allocateData");
             var tableRowCount = rdm.getTableRowCount();
             rdm.reportDatas = [];
             for (var s = 0; s < rdm.split; s++) {
@@ -92,7 +92,7 @@ var ReportDataManager = {
                     rowIndex++;
                 }
             }
-            timeEnd("allocateData");
+            logTimeEnd("allocateData");
         };
 
         rdm.updateSortColumn = function (sortIndex, orderBy) {

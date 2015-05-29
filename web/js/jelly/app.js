@@ -147,18 +147,17 @@ var Client = {
             }
 
             //bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1);
-            bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, "20150527", config.kChartMin1);
+            bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1);
             client.kChartWsm.send(bg.kChartRequestData);
         };
 
         client.onKChartDataLoaded = function (temp) {
             log("onKChartDataLoaded mid=%s", temp.mid);
             var bg = client.getBoardGoodsByMid(temp.mid);
-            bg.boardObj.kChartDataList = [];
             //進來的資料,時間近的在前面
             //而且不是每秒都有
             //20150527 資料只有1360筆 時間筆數06:00~05:00為1380筆 差了20筆
-            config.formatKChartData(temp.c, bg.boardObj.kChartDataList);
+            config.calculateKChartData(temp.c, bg.boardObj);
             client.runChartManager.show(bg.boardObj);
         };
 
@@ -238,9 +237,10 @@ var runChartManager = {
             var dataDriven = DataDriven.createNew(chart, boardObj, "kChartDataList");
             chart.setDataDriven(dataDriven);
             var today = moment().subtract(1, 'day').format('YYYYMMDD');
-
-            var startTime = moment(today + boardObj.startTime, "YYYYMMDDHHmmss");
-            var endTime = moment(today + boardObj.endTime, "YYYYMMDDHHmmss");
+            log(boardObj.quoteDate + boardObj.startTime);
+            log(boardObj.quoteDate + boardObj.endTime);
+            var startTime = moment(boardObj.quoteDate + boardObj.startTime, "YYYYMMDDHHmmss");
+            var endTime = moment(boardObj.quoteDate + boardObj.endTime, "YYYYMMDDHHmmss");
             if (startTime.isAfter(endTime)) {
                 endTime.add(1, "day");
             }
@@ -258,9 +258,10 @@ var runChartManager = {
             var area = chart.area;
             var spaceHeight = area.height / 20;
 
-            var periodAxis = chart.createPeriodAxis("time");
-            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "totalVolume", "scale", area.x, area.y, area.height / 4);
+            var periodAxis = chart.createPeriodAxis("time",config.getKChartDataDataTime);
+            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, area.height / 4);
             var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
+            var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
 
             var drawStyle = DrawStyle.createNew(chart);
 
@@ -274,6 +275,8 @@ var runChartManager = {
             volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
 
             periodAxis.addLayerDrawFunction(1, drawStyle.drawPeriodAxisTicks);
+
+            mouse.addLayerDrawFunction(2, drawStyle.drawMouseLayerMove);
         };
 
         cm.init();
@@ -306,6 +309,7 @@ function BoardGoods(future, i) {
     this.setBoardObj = function (boardObj) {
         bg.boardObj = boardObj;
         bg.boardObj.name = bg.name;
+        bg.boardObj.volumeMax = 0;
         bg.boardObj.volumeMin = 0;
         bg.boardObj.startTime = bg.startTime;
         bg.boardObj.endTime = bg.endTime;
@@ -326,6 +330,11 @@ function BoardGoods(future, i) {
         var data = bg.boardObj;
         data.upDown = data.last - data.preClose;
         data.upDownPercentage = data.upDown / data.preClose * 100;
+        //1.2 * Math.max(this.priceHigh_ - this.prevClose_, this.prevClose_ - this.priceLow_);
+        var a = JsonTool.formatFloat(1.2*Math.max(parseFloat(data.high)-data.preClose,data.preClose-parseFloat(data.low)),data.scale);
+        //log("a=%s",a);
+        data.highLimit = parseFloat(data.preClose)+a;
+        data.lowLimit = parseFloat(data.preClose)-a;
     }
 
 }

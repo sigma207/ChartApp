@@ -234,13 +234,13 @@ function log() {
     } catch (e) {
     }
 }
-function time(msg) {
+function logTime(msg) {
     try {
         console.time(msg);
     } catch (e) {
     }
 }
-function timeEnd(msg) {
+function logTimeEnd(msg) {
     try {
         console.timeEnd(msg);
     } catch (e) {

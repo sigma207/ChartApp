@@ -34,39 +34,65 @@ var config = {
         };
         fileReader.readAsText(blob);
     },
-    formatKChartData: function (c, kChartData) {
+    getKChartDataDataTime: function (kChartData) {
+          return kChartData.date+kChartData.time.replace(":","");
+    },
+    calculateKChartData: function (c, boardObj) {
+        boardObj.kChartDataList = [];
         var list = c.split("\r\n");
         var listCount = list.length;
         var propertyCount = config.kChartProperties.length;
         var row = [];
+        var property = "";
         var obj = {};
-        for (var i = 0; i < listCount; i++) {
+        var maxVolume = 0;
+        for (var i = listCount - 1; i >= 0; i--) {
             if (list[i].length > 0) {
                 row = list[i].split(",");
                 obj = {};
                 for (var j = 0; j < propertyCount; j++) {
-                    obj[config.kChartProperties[j]] = row[j];
+                    property = config.kChartProperties[j];
+                    switch(property){
+                        case "open":
+                        case "high":
+                        case "low":
+                        case "close":
+                            obj[property] = parseFloat(row[j]);
+                            break;
+                        case "volume":
+                            obj[property] = parseInt(row[j]);
+                            if(obj[property]>boardObj.volumeMax){
+                                boardObj.volumeMax = obj[property];
+                            }
+                            break;
+                        default :
+                            obj[property] = row[j];
+                            break;
+                    }
+                    //obj[config.kChartProperties[j]] = row[j];
                 }
-                kChartData.push(obj);
+                boardObj.kChartDataList.push(obj);
             }
         }
+        log(boardObj.kChartDataList);
+        log("maxVolume=%s",boardObj.volumeMax);
     },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
     futureList: [
-        new Future("6ECC", "歐元期", 1.22,"060000","050000"),
-        new Future("CLCC", "輕油期", 0.4,"060000","040000"),
-        new Future("GCCC", "黃金期", 0.31,"060000","040000"),
-        new Future("HSICC", "桓生期", 2.46,"091500","161500"),
+        new Future("6ECC", "歐元期", 1.22, "060000", "050000"),
+        new Future("CLCC", "輕油期", 0.4, "060000", "040000"),
+        new Future("GCCC", "黃金期", 0.31, "060000", "040000"),
+        new Future("HSICC", "桓生期", 2.46, "091500", "161500"),
         //new Future("IFCC", "滬深期", 0.26),
-        new Future("NKCC", "日經期", 0.26,"074500","134500"),
-        new Future("NQCC", "那斯達", 0.26,"060000","040000"),
+        new Future("NKCC", "日經期", 0.26, "074500", "134500"),
+        new Future("NQCC", "那斯達", 0.26, "060000", "040000"),
         //new Future("SICC", "白銀期", 1.22),
-        new Future("TECC", "電子期", 1.13,"084500","134500"),
-        new Future("TFCC", "金融期", 1.74,"084500","134500"),
-        new Future("TWCC", "摩台期", 1.2,"084500","134500"),
+        new Future("TECC", "電子期", 1.13, "084500", "134500"),
+        new Future("TFCC", "金融期", 1.74, "084500", "134500"),
+        new Future("TWCC", "摩台期", 1.2, "084500", "134500"),
         //new Future("TWICC", "加權指", 1.22),
-        new Future("TXCC", "台指期", 1.06,"084500","134500"),
-        new Future("YMCC", "道瓊期", 0.25,"060000","050000")
+        new Future("TXCC", "台指期", 1.06, "084500", "134500"),
+        new Future("YMCC", "道瓊期", 0.25, "060000", "050000")
     ],
     boardGoods: {
         "6ECC": "歐元期",

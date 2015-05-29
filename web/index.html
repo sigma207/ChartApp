@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Financial Quotation</title>
+        <style id="css-main_app"></style>
+        <style id="css-app"></style>
+        <style id="css-jquery_ui"></style>
+        
+        <!-- http://jqueryui.com/ -->
+        <link rel="stylesheet" href="FQ/3rdParty/jquery-ui-1.11.0/jquery-ui.structure.min.css" />
+        <!--<link rel="stylesheet" href="FQ/3rdParty/jquery-ui-1.11.0/themes/black/jquery-ui.min.css" />-->
+        <script src="FQ/3rdParty/jquery-ui-1.11.0/external/jquery/jquery.js"></script>
+        <script src="FQ/3rdParty/jquery-ui-1.11.0/jquery-ui.min.js"></script>
+        <script src="FQ/3rdParty/jquery.mousewheel.js"></script>
+
+        <!-- https://datatables.net/ -->
+        <!--<link rel="stylesheet" href="FQ/3rdParty/DataTables-1.10.4/css/jquery.dataTables.min.css" />-->
+        <script src="FQ/3rdParty/DataTables-1.10.4/js/jquery.dataTables.min.js"></script>
+
+        <link rel="stylesheet" href="FQ/3rdParty/DataTables-1.10.4/extensions/ColReorder/css/dataTables.colReorder.min.css" />
+        <script src="FQ/3rdParty/DataTables-1.10.4/extensions/ColReorder/js/dataTables.colReorder.min.js"></script>
+
+        <!-- http://layout.jquery-dev.com/ -->
+        <link rel="stylesheet" href="3rdParty/jquery.layout 1.4.4/layout-default-latest.css" />
+        <script src="3rdParty/jquery.layout 1.4.4/jquery.layout-latest.js"></script>
+
+        <!-- md5 -->
+        <script src="3rdParty/CryptoJS v3.1.2/rollups/md5.js"></script>
+
+        <link rel="stylesheet" href="loadingProgress.css" />
+        <link rel="stylesheet" href="css/app-pc.css" />
+        <link rel="stylesheet" href="FQ/fq.css" />
+        <script src="index.js"></script>
+        <script src="fq_market-capital.js"></script>
+        <script src="fq_market-snapshot.js"></script>
+    </head>
+    <body class="ui-widget-content" oncontextmenu="return false;" style="visibility: hidden;">
+        <div id="loadingProgressContainer">
+            <table id="loadingProgressLayout">
+                <tr><td></td></tr>
+                <tr>
+                    <td style="text-align: center;"><span id="loadingProgressCaption">&nbsp;</span></td>
+                </tr>
+                <tr>
+                    <td style="text-align: center;"><span id="loadingProgressPercent">&nbsp;</span></td>
+                </tr>
+                <tr><td style="text-align: center;"><input type="button" id="btnReconect" value="Reconnect" style="display: none;"></td></tr>
+                <tr>
+                    <td style="text-align: center;">
+                        <div id="fadingBarsG">
+                            <div id="fadingBarsG_1" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_2" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_3" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_4" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_5" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_6" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_7" class="fadingBarsG"></div>
+                            <div id="fadingBarsG_8" class="fadingBarsG"></div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <iframe name="fq_client_manager" src="FQ/clientmanager.htm" class="fq"></iframe>
+        <div class="ui-layout-center">
+            <div class="ui-layout-center">
+                <div class="ui-layout-north">
+                    <span id="tabs_of_trading">
+                        <input type="radio" id="btn_tab_runchart" name="tab" value="runchart" checked><label for="btn_tab_runchart">走勢圖</label>
+                        <input type="radio" id="btn_tab_kgraph" name="tab" value="kgraph"><label for="btn_tab_kgraph">K線圖</label>
+                        <input type="radio" id="btn_tab_orders" name="tab" value="order"><label for="btn_tab_orders">訂單</label>
+                        <input type="radio" id="btn_tab_opened_positions" name="tab" value="opened_positions"><label for="btn_tab_opened_positions">未平倉</label>
+                        <input type="radio" id="btn_tab_closed_positions" name="tab" value="closed_positions"><label for="btn_tab_closed_positions">已平倉</label>
+                        <input type="radio" id="btn_tab_summary" name="tab" value="summary"><label for="btn_tab_summary">統計</label>
+                        <input type="radio" id="btn_tab_consultor_msg" name="tab" value="consultor_msg"><label for="btn_tab_consultor_msg">投顧信息</label>
+                    </span>
+                </div>
+                <div class="ui-layout-center">
+                    <!-- Tab: 走勢圖、K線圖、訂單、未平倉、已平倉、統計、投顧信息 -->
+                    <div id="tab_runchart" class="tabs_of_trading" style="width: 100%; height: 100%;">
+                        <div class="ui-layout-center">
+                            <!-- 走勢圖 -->
+                            <iframe name="fq_client_runchart" src="FQ/client-runchart.htm" class="fqModule" seamless></iframe>
+                        </div>
+                        <div class="ui-layout-east">
+                            <!-- 最佳五檔 -->
+                            <table id="table_best_rank" style="width: 100%; height: 100%; text-align: center;" class="dataTable">
+                                <thead>
+                                    <tr class="ui-state-default"><th style="width: 30%;"></th><th style="width: 15%;">委買</th><th style="width: 10%;">價格</th><th style="width: 15%;">委賣</th><th style="width: 30%;"></th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td></td><td></td><td id="best_rank_5_ask_price"></td><td id="best_rank_5_ask_volume"></td><td id="best_rank_5_ask_volume_bar" class="col_ask_volume_bar"><span class="ask_volume_bar"></span></td></tr>
+                                    <tr><td></td><td></td><td id="best_rank_4_ask_price"></td><td id="best_rank_4_ask_volume"></td><td id="best_rank_4_ask_volume_bar" class="col_ask_volume_bar"><span class="ask_volume_bar"></span></td></tr>
+                                    <tr><td></td><td></td><td id="best_rank_3_ask_price"></td><td id="best_rank_3_ask_volume"></td><td id="best_rank_3_ask_volume_bar" class="col_ask_volume_bar"><span class="ask_volume_bar"></span></td></tr>
+                                    <tr><td></td><td></td><td id="best_rank_2_ask_price"></td><td id="best_rank_2_ask_volume"></td><td id="best_rank_2_ask_volume_bar" class="col_ask_volume_bar"><span class="ask_volume_bar"></span></td></tr>
+                                    <tr><td></td><td></td><td id="best_rank_1_ask_price"></td><td id="best_rank_1_ask_volume"></td><td id="best_rank_1_ask_volume_bar" class="col_ask_volume_bar"><span class="ask_volume_bar"></span></td></tr>
+                                    <tr><td id="best_rank_1_bid_volume_bar" class="col_bid_volume_bar"><span class="bid_volume_bar"></span></td><td id="best_rank_1_bid_volume"></td><td id="best_rank_1_bid_price"></td><td></td><td></td></tr>
+                                    <tr><td id="best_rank_2_bid_volume_bar" class="col_bid_volume_bar"><span class="bid_volume_bar"></span></td><td id="best_rank_2_bid_volume"></td><td id="best_rank_2_bid_price"></td><td></td><td></td></tr>
+                                    <tr><td id="best_rank_3_bid_volume_bar" class="col_bid_volume_bar"><span class="bid_volume_bar"></span></td><td id="best_rank_3_bid_volume"></td><td id="best_rank_3_bid_price"></td><td></td><td></td></tr>
+                                    <tr><td id="best_rank_4_bid_volume_bar" class="col_bid_volume_bar"><span class="bid_volume_bar"></span></td><td id="best_rank_4_bid_volume"></td><td id="best_rank_4_bid_price"></td><td></td><td></td></tr>
+                                    <tr><td id="best_rank_5_bid_volume_bar" class="col_bid_volume_bar"><span class="bid_volume_bar"></span></td><td id="best_rank_5_bid_volume"></td><td id="best_rank_5_bid_price"></td><td></td><td></td></tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="ui-state-default"><td colspan="2" id="col_bid_total_volume"></td><td>統計</td><td colspan="2" id="col_ask_total_volume"></td></tr>
+                                    <tr><td colspan="5" id="best_rank_volume_rate"><span class="bid_volume_bar"></span><span class="ask_volume_bar"></span></td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="tab_kgraph" class="tabs_of_trading" style="width: 100%; height: 100%; display: none;">
+                        <table style="width: 100%; height: 100%;">
+                            <tr style="height: 100%;">
+                                <td style="width: 100%; height: 100%;">
+                                    <!-- K線圖 -->
+                                    <iframe name="fq_client_kgraph" src="FQ/client-kgraph.htm" class="fqModule" allowfullscreen seamless></iframe>
+                                </td>
+                                <td style="width: 0%; height: 100%;">
+                                    <!-- K線圖工具選項 -->
+                                    <iframe name="fq_client_kgraph_toolkits" src="FQ/client-kgraphtoolkits.htm" class="fqModule" seamless></iframe>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div id="tab_orders" class="tabs_of_trading" style="width: 100%; height: 100%; display: none;">
+                        <table id="table_orders" style="width: 100%;">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="tab_opened_positions" class="tabs_of_trading" style="width: 100%; height: 100%; display: none;">
+                        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; " class="verticalFlex">
+                            <div style="display: inline-block;" class="flexWithNone">
+                                <table>
+                                    <tr>
+                                        <td><input type="button" id="btn_close_all_selected_opened_positions" value="市價平倉" /></td>
+                                        <td><input type="button" id="btn_select_all_opened_positions" value="全部選取" /></td>
+                                        <td><input type="button" id="btn_unselect_all_opened_positions" value="取消選取" /></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <table id="table_opened_positions" style="width: 100%;">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="tab_closed_positions" class="tabs_of_trading" style="width: 100%; height: 100%; display: none;">
+                        <table id="table_closed_positions" style="width: 100%;">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="tab_summary" class="tabs_of_trading" style="width: 100%; height: 100%; display: none;">
+                        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; " class="verticalFlex">
+                            <!--
+                            <div style="display: inline-block;" class="flexWithNone">
+                                <table>
+                                    <tr>
+                                        <td>保證金額度：<input type="text" size="8" /></td>
+                                        <td>今日損益：<input type="text" size="8" /></td>
+                                        <td>帳戶餘額：<input type="text" size="8" /></td>
+                                        <td>極輸：<input type="text" size="8" /></td>
+                                        <td>極贏：<input type="text" size="8" /></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            -->
+                            <table id="table_summary" style="width: 100%;" class="flexWithAuto">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="tab_consultor_msg" class="tabs_of_trading" style="width: 100%; height: 100%;">
+                        <!-- 投顧信息 -->
+                        <iframe id="iframe_consultor_msg" style="width: 100%; height: 100%;">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+            <div class="ui-layout-north">
+                <iframe name="fq_client_tape" src="FQ/client-tape.htm" class="fqModule" seamless></iframe> <!-- 不使用預設的盤面樣式 -->
+                <table id="table_instruments" style="width: 100%; height: 100%;">
+                    <thead></thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="ui-layout-south">
+                <table style="width: 100%; height: 100%; white-space: nowrap;">
+                    <tr>
+                        <td id="ordering_type_container" style="width: 0%;">
+                            <div style="margin: 8px;">
+                                <input type="radio" id="order_operation_normal" name="order_operation" value="normal" checked><label for="order_operation_normal">一般下單</label><br/>
+                                <input type="radio" id="order_operation_easy" name="order_operation" value="easy"><label for="order_operation_easy">閃電下單</label>
+                            </div>
+                        </td>
+                        <td id="ordering_container" style="width: 100%;">
+                            <table>
+                                <tr>
+                                    <td>
+                                        <div id="order_symbol_display_name" style="text-align: center;"></div><br/>
+                                        <input type="checkbox" id="lock_current_symol" style="vertical-align: middle;" />鎖定商品
+                                    </td>
+                                    <td class="non_easy container">
+                                        <input type="radio" id="order_type_market" name="order_type" value="market" checked><label for="order_type_market">市價單</label><br/>
+                                        <input type="radio" id="order_type_limit" name="order_type" value="limit"><label for="order_type_limit">限價單</label><br/>
+                                        <input type="radio" id="order_type_minute" name="order_type" value="minute"><label for="order_type_minute">批分單</label><br/>
+                                        <span style="display: none;"><input type="radio" id="order_type_close" name="order_type" value="close"><label for="order_type_close">收盤單</label><br/></span>
+                                    </td>
+                                    <td class="non_easy container">
+                                        <span id="order_limit_input">限價<input type="text" id="spinner_order_pending_price"><br/></span>
+                                        停利<input type="text" id="spinner_order_take_profit"><br/>
+                                        停損<input type="text" id="spinner_order_stop_loss">
+                                    </td>
+                                    <td class="container">
+                                        <table style="margin: auto; border-spacing: 4px 0px;">
+                                            <tr>
+                                                <td style="text-align: center;">
+                                                    <input type="button" value="1" class="btn_lots">
+                                                    <input type="button" value="2" class="btn_lots">
+                                                    <input type="button" value="3" class="btn_lots">
+                                                    <input type="button" value="4" class="btn_lots">
+                                                    <input type="button" value="5" class="btn_lots">
+                                                </td>
+                                                <td rowspan="3"><span id="btn_order_sell"></span>&nbsp;<span id="btn_order_buy"></span></td>
+                                                <td class="non_easy"><input type="checkbox" id="order_option_close_all_when_market_closed" name="order_option" value="close_all_when_market_closed" style="vertical-align: middle;"><label for="order_option_close_all_when_market_closed">收盤全平</label></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: center;">口數<input type="text" id="spinner_order_lots"></td>
+                                                <td class="non_easy"><input type="checkbox" id="order_option_do_not_confirm_when_order" name="order_option" value="do_not_confirm_when_order" style="vertical-align: middle;"><label for="order_option_do_not_confirm_when_order">下單不確認</label></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: center;">
+                                                    <div id="btns_contract_type">
+                                                        <input type="radio" id="btn_contract_big" name="contract_type" value="big" checked /><label for="btn_contract_big">大</label>
+                                                        <input type="radio" id="btn_contract_middle" name="contract_type" value="middle" /><label for="btn_contract_middle">中</label>
+                                                        <input type="radio" id="btn_contract_small" name="contract_type" value="small" /><label for="btn_contract_small">小</label>
+                                                    </div>
+                                                </td>
+                                                <td class="non_easy"><input type="checkbox" id="order_hint_when_limit_order_dealt" name="order_option" value="hint_when_limit_order_dealt" style="vertical-align: middle;"><label for="order_hint_when_limit_order_dealt">限價成交提示</label></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="ui-layout-north">
+            <!-- 主選單 -->
+            <table style="width: 100%; height: 100%;">
+                <tr>
+                    <td>
+                        <input type="button" id="btn_menu_system" class="main_menu" value="系統">
+                        <input type="button" id="btn_menu_info" class="main_menu" value="資訊">
+                        <input type="button" id="btn_menu_rules" class="main_menu" value="規則">
+                        <input type="button" id="btn_menu_remote" class="main_menu" value="遠端">
+                    </td>
+                    <td>
+                        <span>商品：</span><span id="symbol_name"></span>
+                    </td>
+                    <td>
+                        <span>最後交易日：</span><span id="last_trade_date"></span>
+                    </td>
+                    <td>
+                        <span>禁新：</span><span id="stop_order_high" class="instrument_style_updown_up"></span>, <span id="stop_order_low" class="instrument_style_updown_down"></span>
+                    </td>
+                    <td>
+                        <span>強平：</span><span id="force_close_high" class="instrument_style_updown_up"></span>, <span id="force_close_low" class="instrument_style_updown_down"></span>
+                    </td>
+                    <td>
+                        <div style="float: right;">
+                            <input type="button" id="btn_theme_blue" value="藍">
+                            <input type="button" id="btn_theme_red" value="紅">
+                            <input type="button" id="btn_theme_black" value="黑">
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="ui-layout-south">
+            <div style="float: right;">
+                <span style="display: none;"><span>版本：</span><span></span></span>
+                <span><img src="img/icon_system_bar_pc.png" class="icon"></span><span></span>
+                <span><img src="img/icon_system_bar_account.png" class="icon"></span><span id="current_account_hint"></span>
+                <span><img src="img/icon_system_bar_trade.png" class="icon"></span><span></span>
+                <span><img src="img/icon_system_bar_chart.png" class="icon"></span><span></span>
+                <span><img src="img/icon_system_bar_time.png" class="icon"></span><span id="server_time"></span>
+            </div>
+        </div>
+        <div class="ui-layout-west">
+            <div class="ui-layout-center">
+                <table id="table_account_info" style="width: 100%;" style="text-align: right;">
+                    <col width="0%">
+                    <col width="100%">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">帳號</th>
+                            <th><span id="current_account"></span><select id="sub_accounts" style="display: none;"></select></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="text-align: left;">保證金額度</td><td id="margin">&nbsp;</td></tr>
+                        <tr><td style="text-align: left;">帳戶餘額</td><td id="balance">&nbsp;</td></tr>
+                        <tr><td style="text-align: left;">今日損益</td><td id="profit">&nbsp;</td></tr>
+                        <tr><td style="text-align: left;">聯絡人</td><td id="contact_person">&nbsp;</td></tr>
+                        <tr><td style="text-align: left;">電話</td><td id="contact_phone_number">&nbsp;</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="ui-layout-south">
+                <div class="ui-layout-north">
+                    <span id="tabs_of_tick">
+                        <input type="radio" id="btn_tab_tick_details" name="tab" value="tick_details" checked><label for="btn_tab_tick_details">明細</label>
+                        <input type="radio" id="btn_tab_tick_volume_by_price" name="tab" value="tick_volumes"><label for="btn_tab_tick_volume_by_price">量價表</label>
+                    </span>
+                </div>
+                <div class="ui-layout-center">
+                    <!-- Tab - 明細 -->
+                    <div id="tab_tick_details" class="tabs_of_tick" style="width: 100%; height: 100%;">
+                        <table id="table_tick_details" style="width: 100%;">
+                            <thead></thead>
+                        </table>
+                    </div>
+                    <!-- Tab - 量價表 -->
+                    <div id="tab_tick_volume_by_price" class="tabs_of_tick" style="width: 100%; height: 100%; display: none;">
+                        <table id="table_tick_volume_by_price" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>價格</th>
+                                    <th></th>
+                                    <th>數量</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Ordering is important, HTML element of class "fqOverlap" must append after all HTML element of class "fqMobule", otherwise z-index will not work currectly when fullscreen mode. -->
+        <iframe name="fq_client_dialog_html" src="FQ/client-dialog_html.htm" class="fqOverlap" style="z-index: -1;" seamless></iframe>
+        <iframe name="fq_client_dialog_custom_instruments" src="FQ/client-dialog_custom_instruments.htm" class="fqOverlap" style="z-index: -1;" seamless></iframe>
+        <iframe name="fq_client_dialog_custom_columns" src="FQ/client-dialog_custom_columns.htm" class="fqOverlap" style="z-index: -1;" seamless></iframe>
+        <iframe name="fq_client_dialog_kgraph_indicators" src="FQ/client-dialog_kgraph_indicators.htm" class="fqOverlap" style="z-index: -1;" seamless></iframe>
+        <iframe name="fq_client_contextmenus" src="FQ/client-contextmenus.htm" class="fqOverlap" style="z-index: -1;" oncontextmenu="return false;" seamless></iframe>
+        <iframe name="fq_client_tooltips" src="FQ/client-tooltips.htm" class="fqOverlap" style="z-index: 1; pointer-events: none;" seamless></iframe>
+    </body>
+</html>

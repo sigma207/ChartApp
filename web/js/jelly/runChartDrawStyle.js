@@ -2,6 +2,7 @@
  * Created by user on 2015/5/26.
  */
 var DrawStyle = {
+    FONT_FAMILY: "Helvetica",
     TICK_COLOR: "#A9A9A9",
     TICK_LINE_WIDTH: 0.5,
     VOLUME_TEXT_COLOR: "#00FFF7",
@@ -17,7 +18,52 @@ var DrawStyle = {
             ctx.strokeStyle = DrawStyle.TICK_COLOR;
             ctx.rect(chart.area.x, chart.area.y - chart.area.height, chart.area.width, chart.area.height);
             ctx.stroke();
+            ctx.fillStyle = "white";
+            ctx.textBaseline = "bottom";
+            ctx.font = "18px "+DrawStyle.FONT_FAMILY;
+            ctx.fillText(runChart.dataDriven.source.name, ctx.canvas.width/2, chart.area.top-5);
             ctx.restore();
+        };
+
+        ds.drawMouseLayerMove = function (ctx) {
+            //mouseCtx
+            var mouse = runChart.mouse;
+            var periodAxis = runChart.periodAxis;
+            if (mouse.inChartArea) {
+                if (mouse.dragging) {
+                    //var newStartIndex = -1;
+                    //if (mouse.x > mouse.lastX && periodAxis.endIndex < runChart.dataDriven.count - 1) {
+                    //    newStartIndex = periodAxis.startIndex + 1;
+                    //} else if (mouse.x < mouse.lastX && periodAxis.startIndex > 0) {
+                    //    newStartIndex = periodAxis.startIndex - 1;
+                    //}
+                    //if (newStartIndex != -1) {
+                    //    //this.clearLayer(ctx);
+                    //    runChart.changePeriodRange(newStartIndex);
+                    //}
+                } else {
+                    ds.mouseInfo(ctx);
+                }
+
+            }
+        };
+
+        ds.mouseInfo = function (ctx) {
+            var periodAxis = runChart.periodAxis;
+            var source = runChart.dataDriven.source;
+            var list = runChart.dataDriven.list;
+            //var data = list[periodAxis.startIndex + runChart.mouse.index];
+            var chartArea = runChart.area;
+
+            mouseGuideWires();
+
+            function mouseGuideWires() {
+                ctx.save();
+                ctx.strokeStyle = "gray";
+                ctx.drawHorizontalLine(chartArea.x, runChart.mouse.y, chartArea.right);
+                ctx.drawVerticalLine(runChart.mouse.x, chartArea.top, chartArea.y);
+                ctx.restore();
+            }
         };
 
         ds.drawValueAxis = function (ctx) {
@@ -44,9 +90,8 @@ var DrawStyle = {
                 var oldValue, newValue, x, y, oldX, oldY;
                 for (i = periodAxis.dataStartIndex; i <= periodAxis.dataEndIndex; i++) {
                     data = list[i];
-                    log(data.time);
                     newValue = data[valueAxis.column];
-                    //log(newValue);
+                    //log(data.time);
                     x = data.x;
                     y = data[valueAxis.column + "Y"];
                     if (i == 0) {
@@ -65,23 +110,23 @@ var DrawStyle = {
                     oldY = y;
                     oldValue = newValue;
                 }
-                log("i=%s",i);
+                log("i=%s", i);
             } else if (valueAxis.column == "volume") {
-                //ctx.strokeStyle = "blue";
-                //ctx.fillStyle = "#3E92FF";
-                //var startX, endX, quarterScale = periodAxis.scale / 4;
-                //ctx.beginPath();
-                //for (i = periodAxis.startIndex; i <= periodAxis.endIndex; i++) {
-                //    data = list[i];
-                //    startX = data.x - quarterScale;
-                //    endX = data.x + quarterScale;
-                //    ctx.moveTo(startX, valueAxis.y);
-                //    ctx.lineTo(startX, data[valueAxis.column + "Y"]);
-                //    ctx.lineTo(endX, data[valueAxis.column + "Y"]);
-                //    ctx.lineTo(endX, valueAxis.y);
-                //}
-                //ctx.stroke();
-                //ctx.fill();
+                ctx.strokeStyle = DrawStyle.VOLUME_TEXT_COLOR;
+                ctx.fillStyle = DrawStyle.VOLUME_TEXT_COLOR;
+                var startX, endX, quarterScale = periodAxis.scale / 4;
+                ctx.beginPath();
+                for (i = periodAxis.dataStartIndex; i <= periodAxis.dataEndIndex; i++) {
+                    data = list[i];
+                    startX = data.x - quarterScale;
+                    endX = data.x + quarterScale;
+                    ctx.moveTo(startX, valueAxis.y);
+                    ctx.lineTo(startX, data[valueAxis.column + "Y"]);
+                    ctx.lineTo(endX, data[valueAxis.column + "Y"]);
+                    ctx.lineTo(endX, valueAxis.y);
+                }
+                ctx.stroke();
+                ctx.fill();
             }
             ctx.restore();
         };
@@ -138,9 +183,9 @@ var DrawStyle = {
                 y = axis.y - axis.convertY(tick.value);
                 ctx.fillText(numeral(tick.value).format(valueFormat), x, y);
                 if (i > 0 && i < tickCount - 1) {
-                    if(i==3){
+                    if (i == 3) {
                         ctx.strokeStyle = DrawStyle.PRE_CLOSE_COLOR;
-                    }else{
+                    } else {
                         ctx.strokeStyle = DrawStyle.TICK_COLOR;
                     }
                     ctx.drawHorizontalLine(axis.x, y, runChart.area.right);
@@ -152,22 +197,23 @@ var DrawStyle = {
 
         ds.createValueAxisTicks = function (axis) {
             var ticks;
+            var decimal = axis.getValueDecimal();
             if (axis.column == "close") {
                 ticks = axis.createTicks(6);
                 var top = axis.valueMin;
                 var i;
                 for (i = 0; i < ticks.count / 2; i++) {
                     ticks.addTick(top, "green");
-                    top = JsonTool.formatFloat(top + ticks.distance, 2);
+                    top = JsonTool.formatFloat(top + ticks.distance, decimal);
                 }
-                top = JsonTool.formatFloat(axis.source.preClose, 2);
+                top = JsonTool.formatFloat(axis.source.preClose, decimal);
                 for (i = 0; i < ticks.count / 2; i++) {
                     if (i == 0) {
                         ticks.addTick(top, "white");
                     } else {
                         ticks.addTick(top, "red");
                     }
-                    top = JsonTool.formatFloat(top + ticks.distance, 2);
+                    top = JsonTool.formatFloat(top + ticks.distance, decimal);
                 }
                 ticks.addTick(axis.valueMax, "red");
             } else if (axis.column == "volume") {

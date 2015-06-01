@@ -7,16 +7,26 @@ var Client = {
         client.boardGoodsMap = {};
         client.quoteWsm = WebSocketManager.createNew(config.quoteWsUrl, "board");
         client.kChartWsm = WebSocketManager.createNew(config.kChartWsUrl, "kChart");
+        client.columnMap = {};
         client.boardDataManager = undefined;
         client.boardTable = undefined;
         client.boardDataTotal = 0;
         client.boardDataLoaded = 0;
         client.boardDataList = [];
+        client.runChartIndex = -1;
 
         client.init = function () {
+            var i;
+            var count = config.quoteColumnList.length;
+            var quoteColumn = undefined;
+            for (i = 0; i < count; i++) {
+                quoteColumn = config.quoteColumnList[i];
+                client.columnMap["key" + quoteColumn.key] = quoteColumn;
+            }
+            //log(client.columnMap);
             var bg = undefined;
             client.boardDataTotal = 0;
-            for (var i = 0; i < config.futureList.length; i++) {
+            for (i = 0; i < config.futureList.length; i++) {
                 bg = new BoardGoods(config.futureList[i], client.boardDataTotal);
                 bg.boardRequestData = config.getBoardRequest(bg.code, bg.boardMid);
                 bg.boardRegisterRequestData = config.getBoardRegisterRequest(bg.code, bg.boardMid);
@@ -31,6 +41,7 @@ var Client = {
             client.boardTable.addTdClassRenderer("upDown", client.getBoardUpDownClass);
             client.boardDataManager = ReportDataManager.createNew(false);
             client.boardDataManager.addTable(client.boardTable);
+            $(document).on("rowClick", client.onBoardClick);
             $(window).on("beforeunload", function () {
                 client.stop();
             });
@@ -75,7 +86,13 @@ var Client = {
                 obj = client.quoteFormat(JSON.parse(temp.c).data);
                 bg = client.boardGoodsMap[obj.code];//with out mid
                 bg.boardPushData = data;
+                //log(obj);
+                if (client.runChartIndex == bg.index) {
+                    bg.updateTick(obj);
+                    client.runChartManager.refresh();
+                }
                 bg.updateBoardObj(obj);
+
                 client.boardDataManager.updateRowData(bg.index, obj);
             } else if (temp.tp == "s") {
                 if (temp.tr == "5003") {
@@ -124,6 +141,10 @@ var Client = {
             }
         };
 
+        client.onBoardClick = function (e, tableClass, rowIndex, rowData) {
+            client.requestKChart(rowIndex);
+        };
+
         client.requestBoard = function () {
             for (var key in client.boardGoodsMap) {
                 client.quoteWsm.send(client.boardGoodsMap[key].boardRequestData);
@@ -158,6 +179,7 @@ var Client = {
             //而且不是每秒都有
             //20150527 資料只有1360筆 時間筆數06:00~05:00為1380筆 差了20筆
             config.calculateKChartData(temp.c, bg.boardObj);
+            client.runChartIndex = bg.index;
             client.runChartManager.show(bg.boardObj);
         };
 
@@ -174,11 +196,23 @@ var Client = {
             var key = null;
             //time("quoteFormat");
             var count = 0;
+            var quoteColumn = undefined;
             while (str.length > 0) {
                 key = str.substr(0, 1);
-                if (config.quoteBateCodeMap.hasOwnProperty("key" + key)) {
+                if (client.columnMap.hasOwnProperty("key" + key)) {
+                    quoteColumn = client.columnMap["key" + key];
                     firstCommaIndex = str.indexOf(",", 1);
-                    obj[config.quoteBateCodeMap["key" + key]] = str.substring(1, firstCommaIndex);
+                    switch (quoteColumn.type) {
+                        case QuoteColumn.prototype.STR_TYPE:
+                            obj[quoteColumn.name] = str.substring(1, firstCommaIndex);
+                            break;
+                        case QuoteColumn.prototype.INT_TYPE:
+                            obj[quoteColumn.name] = parseInt(str.substring(1, firstCommaIndex));
+                            break;
+                        case QuoteColumn.prototype.FLOAT_TYPE:
+                            obj[quoteColumn.name] = parseFloat(str.substring(1, firstCommaIndex));
+                            break;
+                    }
                     if (firstCommaIndex != -1) {
                         str = str.substring(firstCommaIndex + 1);
                     } else {
@@ -199,6 +233,7 @@ var Client = {
                 //log("%s=%s",count,str);
             }
             //timeEnd("quoteFormat");
+            //log(obj);
             return obj;
         };
 
@@ -234,20 +269,37 @@ var runChartManager = {
         cm.chart = chart;
 
         cm.show = function (boardObj) {
-            var dataDriven = DataDriven.createNew(chart, boardObj, "kChartDataList");
-            chart.setDataDriven(dataDriven);
-            var today = moment().subtract(1, 'day').format('YYYYMMDD');
-            log(boardObj.quoteDate + boardObj.startTime);
-            log(boardObj.quoteDate + boardObj.endTime);
+            if (typeof chart.dataDriven === typeof undefined) {
+                var dataDriven = DataDriven.createNew(chart);
+                dataDriven.setSource(boardObj, "kChartDataList");
+                chart.setDataDriven(dataDriven);
+                chart.dataDriven.generate();
+            } else {
+                chart.dataDriven.setSource(boardObj, "kChartDataList");
+                chart.dataDriven.generate();
+            }
+
             var startTime = moment(boardObj.quoteDate + boardObj.startTime, "YYYYMMDDHHmmss");
             var endTime = moment(boardObj.quoteDate + boardObj.endTime, "YYYYMMDDHHmmss");
             if (startTime.isAfter(endTime)) {
                 endTime.add(1, "day");
             }
 
-            var timeTick = TimeTick.createNew(startTime, endTime, TickType.MINUTE);
-            chart.periodAxis.setTimeTick(timeTick);
+            if (typeof chart.periodAxis.timeTick === typeof undefined) {
+                var timeTick = TimeTick.createNew();
+                timeTick.changeType(TickType.MINUTE);
+                timeTick.changeTime(startTime, endTime);
+                chart.periodAxis.setTimeTick(timeTick);
+                chart.periodAxis.timeTick.generateTick();
+            } else {
+                chart.periodAxis.timeTick.changeTime(startTime, endTime);
+                chart.periodAxis.timeTick.generateTick();
+            }
+            chart.draw();
+        };
 
+        cm.refresh = function () {
+            chart.dataDriven.generate();
             chart.draw();
         };
 
@@ -258,7 +310,7 @@ var runChartManager = {
             var area = chart.area;
             var spaceHeight = area.height / 20;
 
-            var periodAxis = chart.createPeriodAxis("time",config.getKChartDataDataTime);
+            var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);
             var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, area.height / 4);
             var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
             var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
@@ -319,6 +371,7 @@ function BoardGoods(future, i) {
         //console.log(moment("20150528060000","YYYYMMDDHHmmss").format("YYYY-MM-DD HH:mm:ss"));
         bg.calculate();
     };
+
     this.updateBoardObj = function (obj) {
         JsonTool.copy(bg.boardObj, obj);
         //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
@@ -326,15 +379,35 @@ function BoardGoods(future, i) {
         //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
 
     };
+
+    this.updateTick = function (obj) {
+        var list = bg.boardObj.kChartDataList;
+        var tickData = list[list.length - 1];
+        if (obj.volume > bg.boardObj.volumeMax) {
+            bg.boardObj.volumeMax = obj.volume;
+        }
+        if (tickData.time == obj.tickTime.substr(0, 5)) {
+            tickData.high = obj.high;
+            tickData.low = obj.low;
+            tickData.close = obj.last;
+            tickData.volume += obj.volume;
+            log("updateTick close=%s,volume=%s,time=%s", tickData.close, tickData.volume, obj.tickTime);
+        } else {
+            var newTickData = new TickData(obj.code, obj.quoteDate, obj.tickTime.substr(0, 5), obj.open, obj.high, obj.low, obj.last, obj.volume);
+            list.push(newTickData);
+            log("addTick close=%s,volume=%s,time=%s", newTickData.close, newTickData.volume, newTickData.time);
+        }
+    };
+
     this.calculate = function () {
         var data = bg.boardObj;
         data.upDown = data.last - data.preClose;
         data.upDownPercentage = data.upDown / data.preClose * 100;
         //1.2 * Math.max(this.priceHigh_ - this.prevClose_, this.prevClose_ - this.priceLow_);
-        var a = JsonTool.formatFloat(1.2*Math.max(parseFloat(data.high)-data.preClose,data.preClose-parseFloat(data.low)),data.scale);
+        var a = JsonTool.formatFloat(1.2 * Math.max(data.high - data.preClose, data.preClose - data.low), data.scale);
         //log("a=%s",a);
-        data.highLimit = parseFloat(data.preClose)+a;
-        data.lowLimit = parseFloat(data.preClose)-a;
+        data.highLimit = data.preClose + a;
+        data.lowLimit = data.preClose - a;
     }
 
 }

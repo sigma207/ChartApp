@@ -1,6 +1,9 @@
 /**
  * Created by user on 2015/5/21.
  */
+QuoteColumn.prototype.STR_TYPE = "str";
+QuoteColumn.prototype.INT_TYPE = "int";
+QuoteColumn.prototype.FLOAT_TYPE = "float";
 var config = {
     quoteWsUrl: "ws://122.152.162.81:10890/websocket",
     kChartWsUrl: "ws://122.152.162.81:10891/websocket",
@@ -35,7 +38,7 @@ var config = {
         fileReader.readAsText(blob);
     },
     getKChartDataDataTime: function (kChartData) {
-          return kChartData.date+kChartData.time.replace(":","");
+        return kChartData.date + kChartData.time.replace(":", "");
     },
     calculateKChartData: function (c, boardObj) {
         boardObj.kChartDataList = [];
@@ -45,6 +48,7 @@ var config = {
         var row = [];
         var property = "";
         var obj = {};
+        var tickData;
         var maxVolume = 0;
         for (var i = listCount - 1; i >= 0; i--) {
             if (list[i].length > 0) {
@@ -52,30 +56,18 @@ var config = {
                 obj = {};
                 for (var j = 0; j < propertyCount; j++) {
                     property = config.kChartProperties[j];
-                    switch(property){
-                        case "open":
-                        case "high":
-                        case "low":
-                        case "close":
-                            obj[property] = parseFloat(row[j]);
-                            break;
-                        case "volume":
-                            obj[property] = parseInt(row[j]);
-                            if(obj[property]>boardObj.volumeMax){
-                                boardObj.volumeMax = obj[property];
-                            }
-                            break;
-                        default :
-                            obj[property] = row[j];
-                            break;
-                    }
-                    //obj[config.kChartProperties[j]] = row[j];
+                    obj[property] = row[j];
                 }
-                boardObj.kChartDataList.push(obj);
+                tickData = new TickData(obj.code, obj.date, obj.time, obj.open, obj.high, obj.low, obj.close, obj.volume);
+                if (tickData.volume > boardObj.volumeMax) {
+                    boardObj.volumeMax = tickData.volume;
+                }
+
+                boardObj.kChartDataList.push(tickData);
             }
         }
         log(boardObj.kChartDataList);
-        log("maxVolume=%s",boardObj.volumeMax);
+        log("maxVolume=%s", boardObj.volumeMax);
     },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
     futureList: [
@@ -110,156 +102,101 @@ var config = {
         "TXCC": "台指期",
         "YMCC": "道瓊期"
     },
-    quoteBateCode: [
-        [",", "bid6", "委買價6"],
-        ["-", "bid7", "委買價7"],
-        [".", "bid8", "委買價8"],
-        ["/", "bid9", "委買價9"],
-        ["0", "bid10", "委買價10"],
-        ["1", "bidVolume6", "委買量6"],
-        ["2", "bidVolume7", "委買量7"],
-        ["3", "bidVolume8", "委買量8"],
-        ["4", "bidVolume9", "委買量9"],
-        ["5", "bidVolume10", "委買量10"],
-        ["6", "ask6", "委賣價6"],
-        ["7", "ask7", "委賣價7"],
-        ["8", "ask8", "委賣價8"],
-        ["9", "ask9", "委賣價9"],
-        [":", "ask10", "委賣價10"],
-        [";", "askVolume6", "委賣量6"],
-        ["<", "askVolume7", "委賣量7"],
-        [">", "askVolume8", "委賣量8"],
-        ["?", "askVolume9", "委賣量9"],
-        ["@", "askVolume10", "委賣量10"],
-        ["A", "tickTime", "成交時間"],
-        ["B", "scale", "小數點"],
-        ["C", "last", "成交價"],
-        ["D", "bid", "委買價"],
-        ["E", "ask", "委賣價"],
-        ["F", "totalVolume", "總量"],
-        ["G", "high", "最高價"],
-        ["H", "low", "最低價"],
-        ["I", "open", "開盤價"],
-        ["J", "close", "收價價"],
-        ["K", "netChange", "於上一價漲跌"],
-        ["L", "preClose", "昨收"],
-        ["M", "oi", "未平倉量"],
-        ["N", "upDown", "漲跌"],
-        ["O", "upDownPercentage", "漲跌幅"],
-        ["P", "volume", "單量"],
-        ["Q", "quoteIndex", "報價索引"],
-        ["R", "", ""],
-        ["S", "type", "E=股票;W=權證;F=期貨;X=外匯;O=選擇權"],
-        ["T", "status", "T=正常交易; P=暫停交易; O=零股交易; U=已下市; A=盤後交易;  R=盤前交易"],
-        ["U", "settlementPrice", "結算價"],
-        ["V", "highLimit", "漲停價"],
-        ["W", "lowLimit", "跌停價"],
-        ["X", "preDayVolume", "昨量"],
-        ["Y", "volumePreW", "成交價量"],
-        ["Z", "bidVolume", "委買量"],
-        ["[", "askVolume", "委賣量"],
-        ["\\", "tradeDate", "本交易日"],
-        ["]", "expireDate", "期貨到期日"],
-        ["^", "strikePrice", "履約價"],
-        ["_", "chineseName", "中文名"],
-        ["`", "quoteDate", "報價日期"],
-        ["a", "bid2", "委買價2"],
-        ["b", "bid3", "委買價3"],
-        ["c", "bid4", "委買價4"],
-        ["d", "bid5", "委買價5"],
-        ["e", "bidVolume2", "委買量2"],
-        ["f", "bidVolume3", "委買量3"],
-        ["g", "bidVolume4", "委買量4"],
-        ["h", "bidVolume5", "委買量5"],
-        ["i", "ask2", "委賣價2"],
-        ["j", "ask3", "委賣價3"],
-        ["k", "ask4", "委賣價4"],
-        ["l", "ask5", "委賣價5"],
-        ["m", "askVolume2", "委賣量2"],
-        ["n", "askVolume3", "委賣量3"],
-        ["o", "askVolume4", "委賣量4"],
-        ["p", "askVolume5", "委賣量4"],
-        ["q", "monthCode", "月份碼"],
-        ["r", "settlementDay", "結算日"]
-    ],
-    quoteBateCodeMap: {
-        "key,": "bid6",
-        "key-": "bid7",
-        "key.": "bid8",
-        "key/": "bid9",
-        "key0": "bid10",
-        "key1": "bidVolume6",
-        "key2": "bidVolume7",
-        "key3": "bidVolume8",
-        "key4": "bidVolume9",
-        "key5": "bidVolume10",
-        "key6": "ask6",
-        "key7": "ask7",
-        "key8": "ask8",
-        "key9": "ask9",
-        "key:": "ask10",
-        "key;": "askVolume6",
-        "key<": "askVolume7",
-        "key>": "askVolume8",
-        "key?": "askVolume9",
-        "key@": "askVolume10",
-        "keyA": "tickTime",
-        "keyB": "scale",
-        "keyC": "last",
-        "keyD": "bid",
-        "keyE": "ask",
-        "keyF": "totalVolume",
-        "keyG": "high",
-        "keyH": "low",
-        "keyI": "open",
-        "keyJ": "close",
-        "keyK": "netChange",
-        "keyL": "preClose",
-        "keyM": "oi",
-        "keyN": "upDown",
-        "keyO": "upDownPercentage",
-        "keyP": "volume",
-        "keyQ": "quoteIndex",
-        "keyR": "",
-        "keyS": "type",
-        "keyT": "status",
-        "keyU": "settlementPrice",
-        "keyV": "highLimit",
-        "keyW": "lowLimit",
-        "keyX": "preDayVolume",
-        "keyY": "volumePreW",
-        "keyZ": "bidVolume",
-        "key[": "askVolume",
-        "key\\": "tradeDate",
-        "key]": "expireDate",
-        "key^": "strikePrice",
-        "key_": "chineseName",
-        "key`": "quoteDate",
-        "keya": "bid2",
-        "keyb": "bid3",
-        "keyc": "bid4",
-        "keyd": "bid5",
-        "keye": "bidVolume2",
-        "keyf": "bidVolume3",
-        "keyg": "bidVolume4",
-        "keyh": "bidVolume5",
-        "keyi": "ask2",
-        "keyj": "ask3",
-        "keyk": "ask4",
-        "keyl": "ask5",
-        "keym": "askVolume2",
-        "keyn": "askVolume3",
-        "keyo": "askVolume4",
-        "keyp": "askVolume5",
-        "keyq": "monthCode",
-        "keyr": "settlementDay"
-    }
+    quoteColumnList:[
+        new QuoteColumn(",","bid6","委買價6",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("-","bid7","委買價7",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn(".","bid8","委買價8",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("/","bid9","委買價9",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("0","bid10","委買價10",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("1","bidVolume6","委買量6",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("2","bidVolume7","委買量7",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("3","bidVolume8","委買量8",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("4","bidVolume9","委買量9",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("5","bidVolume10","委買量10",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("6","ask6","委賣價6",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("7","ask7","委賣價7",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("8","ask8","委賣價8",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("9","ask9","委賣價9",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn(":","ask10","委賣價10",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn(";","askVolume6","委賣量6",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("<","askVolume7","委賣量7",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn(">","askVolume8","委賣量8",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("?","askVolume9","委賣量9",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("@","askVolume10","委賣量10",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("A","tickTime","成交時間",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("B","scale","小數點",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("C","last","成交價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("D","bid","委買價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("E","ask","委賣價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("F","totalVolume","總量",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("G","high","最高價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("H","low","最低價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("I","open","開盤價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("J","close","收盤價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("K","netChange","於上一價漲跌",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("L","preClose","昨收",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("M","oi","未平倉量",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("N","upDown","漲跌",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("O","upDownPercentage","漲跌幅",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("P","volume","單量",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("Q","quoteIndex","報價索引",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("R","","",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("S","type","E=股票;W=權證;F=期貨;X=外匯;O=選擇權",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("T","status","T=正常交易; P=暫停交易; O=零股交易; U=已下市; A=盤後交易;  R=盤前交易",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("U","settlementPrice","結算價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("V","highLimit","漲停價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("W","lowLimit","跌停價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("X","preDayVolume","昨量",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("Y","volumePreW","成交價量",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("Z","bidVolume","委買量",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("[","askVolume","委賣量",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("\\","tradeDate","本交易日",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("]","expireDate","期貨到期日",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("^","strikePrice","履約價",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("_","chineseName","中文名",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("`","quoteDate","報價日期",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("a","bid2","委買價2",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("b","bid3","委買價3",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("c","bid4","委買價4",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("d","bid5","委買價5",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("e","bidVolume2","委買量2",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("f","bidVolume3","委買量3",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("g","bidVolume4","委買量4",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("h","bidVolume5","委買量5",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("i","ask2","委賣價2",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("j","ask3","委賣價3",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("k","ask4","委賣價4",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("l","ask5","委賣價5",QuoteColumn.prototype.FLOAT_TYPE),
+        new QuoteColumn("m","askVolume2","委賣量2",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("n","askVolume3","委賣量3",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("o","askVolume4","委賣量4",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("p","askVolume5","委賣量5",QuoteColumn.prototype.INT_TYPE),
+        new QuoteColumn("q","monthCode","月份碼",QuoteColumn.prototype.STR_TYPE),
+        new QuoteColumn("r","settlementDay","結算日",QuoteColumn.prototype.STR_TYPE)
+    ]
 };
 
+function QuoteColumn(key,name,describe,type){
+    this.key = key;
+    this.name = name;
+    this.describe = describe;
+    this.type = type;
+}
 function Future(code, name, limitPercentage, startTime, endTime) {
     this.code = code;
     this.name = name;
     this.limitPercentage = limitPercentage;
     this.startTime = startTime;
     this.endTime = endTime;
+}
+//kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
+function TickData(code, date, time, open, high, low, close, volume) {
+    this.code = code;
+    this.date = date;
+    this.time = time;
+    this.open = parseFloat(open);
+    this.high = parseFloat(high);
+    this.low = parseFloat(low);
+    this.close = parseFloat(close);
+    this.volume = parseInt(volume);
 }

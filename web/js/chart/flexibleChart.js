@@ -40,21 +40,6 @@ var Chart = {
     }
 };
 
-var DataDriven = {
-    createNew: function (chart, source, listName) {
-        var dataDriven = {};
-        dataDriven.chart = chart;
-        dataDriven.listName = listName;
-        dataDriven.reset = function (newData) {
-            dataDriven.source = newData;
-            dataDriven.list = source[listName];
-            dataDriven.count = dataDriven.list.length;
-        };
-        dataDriven.reset(source);
-        return dataDriven;
-    }
-};
-
 var CanvasLayer = {
     createNew: function (id, canvas) {
         var layer = {};
@@ -103,6 +88,12 @@ var LayerManager = {
                 }
             }
         };
+        cm.clearAllLayer = function () {
+            for (var i = 0; i < cm.layerList.length; i++) {
+                cm.getLayer(i).clear();
+            }
+        };
+
         cm.clearLayer = function (index) {
             cm.getLayer(index).clear();
         };
@@ -156,7 +147,7 @@ var ChartMouse = {
         };
 
         mouse.windowToCanvas = function (x, y) {
-            var bbox =  mouse.layer.canvas.getBoundingClientRect();
+            var bbox = mouse.layer.canvas.getBoundingClientRect();
             return {
                 x: x - bbox.left,
                 y: y - bbox.top
@@ -252,9 +243,9 @@ var ValueAxis = {
             axis.valueMax = axis.source[axis.maxColumn];
             axis.valueDistance = axis.valueMax - axis.valueMin;
             axis.valueScale = axis.height / axis.valueDistance;
-            log("valueMin=%s,valueMax=%s,valueDistance=%s,valueScale=%s", axis.valueMin, axis.valueMax, axis.valueDistance, axis.valueScale);
-            log("area.height=%s,axis.scale=%s",axis.height,axis.valueScale);
-            log("area.valueDistance*axis.scale=%s",axis.valueDistance*axis.valueScale);
+            //log("valueMin=%s,valueMax=%s,valueDistance=%s,valueScale=%s", axis.valueMin, axis.valueMax, axis.valueDistance, axis.valueScale);
+            //log("area.height=%s,axis.scale=%s",axis.height,axis.valueScale);
+            //log("area.valueDistance*axis.scale=%s",axis.valueDistance*axis.valueScale);
         };
 
         axis.convertY = function (value) {
@@ -276,60 +267,117 @@ var TickType = {
     MINUTE: 60
 };
 
+var DataDriven = {
+    createNew: function (chart) {
+        var dataDriven = {};
+        dataDriven.chart = chart;
+        dataDriven.changeCallbackList = [];
+
+        dataDriven.setSource = function (source,listName) {
+            dataDriven.source = source;
+            dataDriven.list = source[listName];
+        };
+
+        dataDriven.generate = function () {
+            dataDriven.count = dataDriven.list.length;
+            dataDriven.dataStartIndex = 0;
+            dataDriven.dataEndIndex = dataDriven.count - 1;
+            dataDriven.runCallback();
+        };
+
+        dataDriven.addCallback = function (callback) {
+            dataDriven.changeCallbackList.push(callback);
+        };
+
+        dataDriven.runCallback = function () {
+            for(var i = 0; i < dataDriven.changeCallbackList.length; i++) {
+                dataDriven.changeCallbackList[i].call(dataDriven);
+            }
+        };
+
+        return dataDriven;
+    }
+};
+
 var TimeTick = {
-    createNew: function (startTime, endTime, tickType) {
+    createNew: function () {
         var tt = {};
-        tt.startTime = startTime;
-        tt.endTime = endTime;
-        tt.tickType = tickType;
-        tt.timeSeconds = tt.endTime.diff(tt.startTime, "second");
-        tt.count = tt.timeSeconds / tt.tickType;
-        tt.tickList = [];
-        tt.tickMap = {};
-        var time = moment(tt.startTime);
-        logTime("timeTick");
-        for (var i = 0; i < tt.count; i++) {
-            tt.tickList.push(time);
-            tt.tickMap[time.format("YYYYMMDDHHmm")] = i;
-            time = moment(time).add(1, "minute");
-        }
-        logTimeEnd("timeTick");
-        log(tt.tickMap);
+
+        tt.changeCallbackList = [];
+
+        tt.changeType = function (tickType) {
+            tt.tickType = tickType;
+        };
+
+        tt.changeTime = function (startTime, endTime) {
+            tt.startTime = startTime;
+            tt.endTime = endTime;
+        };
+
+        tt.generateTick = function () {
+            tt.timeSeconds = tt.endTime.diff(tt.startTime, "second");
+            tt.count = tt.timeSeconds / tt.tickType;
+            tt.tickStartIndex = 0;
+            tt.tickEndIndex = tt.count - 1;
+            tt.tickDisplayCount = tt.tickEndIndex - tt.tickStartIndex + 1;
+            tt.tickList = [];
+            tt.tickMap = {};
+            var i;
+            var time = moment(tt.startTime);
+            logTime("timeTick");
+            for (i = 0; i < tt.count; i++) {
+                tt.tickList.push(time);
+                tt.tickMap[time.format("YYYYMMDDHHmm")] = i;
+                time = moment(time).add(1, "minute");
+            }
+            logTimeEnd("timeTick");
+            log(tt.tickMap);
+            tt.runCallback();
+        };
+
+        tt.addCallback = function (callback) {
+            tt.changeCallbackList.push(callback);
+        };
+
+        tt.runCallback = function () {
+            for(var i = 0; i < tt.changeCallbackList.length; i++) {
+                tt.changeCallbackList[i].call(tt);
+            }
+        };
+
         tt.getTimeTickIndex = function (time) {
             return tt.tickMap[time];
         };
+
         return tt;
     }
 };
 
 var PeriodAxis = {
-    createNew: function (runChart,dataTimeFunction) {
+    createNew: function (runChart, dataTimeFunction) {
         var axis = AxisX.createNew(runChart.area.x, runChart.area.y, runChart.area.width);
         axis.chart = runChart;
         axis.dataTimeFunction = dataTimeFunction;
         axis.valueAxisList = [];
         axis.setTimeTick = function (timeTick) {
             axis.timeTick = timeTick;
-            axis.tickStartIndex = 0;
-            axis.tickEndIndex = axis.timeTick.count - 1;
-            axis.tickDisplayCount = axis.tickEndIndex - axis.tickStartIndex + 1;
-            axis.dataStartIndex = 0;
-            axis.dataEndIndex = axis.chart.dataDriven.count - 1;
-            axis.scale = runChart.area.width / (axis.tickDisplayCount );
+            axis.timeTick.addCallback(axis.onGenerateTick);
+            //axis.timeTick.generateTick();
+            //axis.tickStartIndex = 0;
+            //axis.tickEndIndex = axis.timeTick.count - 1;
+            //axis.tickDisplayCount = axis.tickEndIndex - axis.tickStartIndex + 1;
+            //axis.scale = runChart.area.width / (axis.timeTick.tickDisplayCount );
 
-            log("axis.tickDisplayCount=%s",axis.tickDisplayCount);
-            log("area.width=%s,axis.scale=%s",runChart.area.width,axis.scale);
-            log("area.width*axis.scale=%s",runChart.area.width/axis.scale);
+            //log("axis.tickDisplayCount=%s", axis.tickDisplayCount);
+            //log("area.width=%s,axis.scale=%s", runChart.area.width, axis.scale);
+            //log("area.width*axis.scale=%s", runChart.area.width / axis.scale);
+        };
+
+        axis.onGenerateTick = function () {
+            axis.scale = runChart.area.width / (axis.timeTick.tickDisplayCount );
         };
 
         axis.onDataDriven = function () {
-            //if (axis.displayRange == 0) {
-            //    axis.displayRange = axis.tickCount;
-            //    axis.displayRangeMin = axis.displayRange;
-            //}
-            //axis.startIndex = 0;
-            //axis.endIndex = axis.startIndex + axis.displayRange - 1;
-            //axis.scale = runChart.area.width / (axis.displayRange + 1);
         };
 
         axis.createValueAxis = function (column, minColumn, maxColumn, decimalColumn, x, y, height) {
@@ -354,16 +402,17 @@ var PeriodAxis = {
          * 生成時間軸內資料的x,y
          */
         axis.generateDataLoc = function () {
-            var list = axis.chart.dataDriven.list;
+            var dataDriven = axis.chart.dataDriven;
+            var list = dataDriven.list;
             var data;
             var valueAxis;
             var valueAxisCount = axis.valueAxisList.length;
             var y;
             var timeTick = axis.timeTick;
             var dataTime;
-            for (var dataIndex = axis.dataStartIndex;dataIndex<=axis.dataEndIndex;dataIndex++){
+            for (var dataIndex = dataDriven.dataStartIndex; dataIndex <= dataDriven.dataEndIndex; dataIndex++) {
                 data = list[dataIndex];
-                dataTime = axis.dataTimeFunction.call(axis,data);
+                dataTime = axis.dataTimeFunction.call(axis, data);
                 data.x = axis.convertX(timeTick.getTimeTickIndex(dataTime));
                 for (var v = 0; v < valueAxisCount; v++) {
                     valueAxis = axis.valueAxisList[v];
@@ -421,7 +470,6 @@ var AxisTicks = {
         axisTick.tickList = [];
         axisTick.addTick = function (value, color) {
             var tick = {};
-            //log("addTickValue=%s",value);
             tick.value = value;
             tick.color = color || "black";
             axisTick.tickList.push(tick);
@@ -452,6 +500,11 @@ var RunChart = {
 
         chart.setDataDriven = function (dataDriven) {
             chart.dataDriven = dataDriven;
+            chart.dataDriven.addCallback(chart.onDataDrivenUpdate);
+            //chart.onDataDrivenUpdate();
+        };
+
+        chart.onDataDrivenUpdate = function () {
             var periodAxis = chart.periodAxis;
             periodAxis.onDataDriven();
             var valueAxis;
@@ -461,18 +514,18 @@ var RunChart = {
             }
         };
 
-        chart.createPeriodAxis = function (column,dataTimeFunction) {
-            chart.periodAxis = PeriodAxis.createNew(chart,dataTimeFunction);
+        chart.createPeriodAxis = function (column, dataTimeFunction) {
+            chart.periodAxis = PeriodAxis.createNew(chart, dataTimeFunction);
             chart.periodAxis.column = column;
             return chart.periodAxis;
         };
 
         chart.draw = function () {
             chart.layerManager.clearLayer(0);
-
             chart.drawChartLayer(chart, 0);
             chart.drawAxis();
             chart.drawPeriod();
+            chart.mouseMove();
         };
 
         chart.drawAxis = function () {

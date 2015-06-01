@@ -7,6 +7,8 @@ var DrawStyle = {
     TICK_LINE_WIDTH: 0.5,
     VOLUME_TEXT_COLOR: "#00FFF7",
     PRE_CLOSE_COLOR: "#FF1FC7",
+    RISE_COLOR: "#F20000",
+    FALL_COLOR: "#00EB00",
     createNew: function (runChart) {
         var ds = {};
         ds.drawBackground = function (ctx) {
@@ -83,12 +85,13 @@ var DrawStyle = {
             var valueAxis = this;
             //console.log("drawValueAxisData:%s",valueAxis.column);
             var periodAxis = valueAxis.period;
-            var list = runChart.dataDriven.list;
+            var dataDriven = runChart.dataDriven;
+            var list = dataDriven.list;
             var data, i;
             ctx.save();
             if (valueAxis.column == "close") {
                 var oldValue, newValue, x, y, oldX, oldY;
-                for (i = periodAxis.dataStartIndex; i <= periodAxis.dataEndIndex; i++) {
+                for (i = dataDriven.dataStartIndex; i <= dataDriven.dataEndIndex; i++) {
                     data = list[i];
                     newValue = data[valueAxis.column];
                     //log(data.time);
@@ -97,9 +100,9 @@ var DrawStyle = {
                     if (i == 0) {
                     } else {
                         if (newValue > oldValue) {
-                            ctx.strokeStyle = "red";
+                            ctx.strokeStyle = DrawStyle.RISE_COLOR;
                         } else {
-                            ctx.strokeStyle = "green";
+                            ctx.strokeStyle = DrawStyle.FALL_COLOR;
                         }
                         ctx.beginPath();
                         ctx.moveTo(oldX, oldY);
@@ -110,13 +113,13 @@ var DrawStyle = {
                     oldY = y;
                     oldValue = newValue;
                 }
-                log("i=%s", i);
+                //log("i=%s,time=%s,close=%s,volume=%s", i,data.time,data.close,data.volume);
             } else if (valueAxis.column == "volume") {
                 ctx.strokeStyle = DrawStyle.VOLUME_TEXT_COLOR;
                 ctx.fillStyle = DrawStyle.VOLUME_TEXT_COLOR;
                 var startX, endX, quarterScale = periodAxis.scale / 4;
                 ctx.beginPath();
-                for (i = periodAxis.dataStartIndex; i <= periodAxis.dataEndIndex; i++) {
+                for (i = dataDriven.dataStartIndex; i <= dataDriven.dataEndIndex; i++) {
                     data = list[i];
                     startX = data.x - quarterScale;
                     endX = data.x + quarterScale;
@@ -143,7 +146,7 @@ var DrawStyle = {
             var valueAxis;
             var tickList = axis.timeTick.tickList;
             var valueAxisCount = axis.valueAxisList.length;
-            for (var i = axis.tickStartIndex; i < axis.tickEndIndex; i += axis.timeTick.tickType) {
+            for (var i = axis.timeTick.tickStartIndex; i < axis.timeTick.tickEndIndex; i += axis.timeTick.tickType) {
                 x = axis.convertX(i);
                 ctx.fillText(tickList[i].format("HH:mm"), x, y);
                 for (var j = 0; j < valueAxisCount && i > 0; j++) {

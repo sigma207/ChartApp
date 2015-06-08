@@ -1,4 +1,4 @@
-.boardTable{
+.futureTable {
     border-collapse: collapse;
     border-spacing: 0;
     color: #fff;
@@ -14,7 +14,7 @@
     text-align: right;
 }
 
-.boardTable th {
+.futureTable th {
     border-width: 0 1px 1px 0;
     border-color: #565656;
 
@@ -44,10 +44,10 @@
     color: lightskyblue;
 }
 
-.boardUpColor{
+.futureUpColor{
     color: #ad0000;
 }
 
-.boardDownColor{
+.futureDownColor{
     color: #00a900;
 }

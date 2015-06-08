@@ -131,7 +131,9 @@ var ChartMouse = {
         mouse.y = undefined;
         mouse.lastX = undefined;
         mouse.lastY = undefined;
+        mouse.inChartArea = false;
         mouse.dragging = false;
+        mouse.onMoveOver = undefined;
         mouse.onMoveCall = undefined;
         mouse.onDownCall = undefined;
         mouse.onOutCall = undefined;
@@ -139,6 +141,7 @@ var ChartMouse = {
         mouse.onWheelCall = undefined;
         mouse.registerMouseEvent = function () {
             var canvas = $(mouse.layer.canvas);
+            canvas.mouseover(mouse.onMouseOver);
             canvas.mousemove(mouse.onMouseMove);
             canvas.mousedown(mouse.onMouseDown);
             canvas.mouseout(mouse.onMouseOut);
@@ -152,6 +155,14 @@ var ChartMouse = {
                 x: x - bbox.left,
                 y: y - bbox.top
             };
+        };
+
+        mouse.onMouseOver = function (e) {
+            e.preventDefault();
+            mouse.inChartArea = true;
+            if (typeof mouse.onMoveOver !== typeof undefined) {
+                mouse.onMoveOver.call(mouse);
+            }
         };
 
         mouse.onMouseMove = function (e) {
@@ -174,6 +185,7 @@ var ChartMouse = {
         };
 
         mouse.onMouseOut = function (e) {
+            mouse.inChartArea = false;
             if (typeof mouse.onOutCall !== typeof undefined) {
                 mouse.onOutCall.call(mouse);
             }
@@ -359,6 +371,8 @@ var PeriodAxis = {
         axis.chart = runChart;
         axis.dataTimeFunction = dataTimeFunction;
         axis.valueAxisList = [];
+        axis.axisYList = [];
+        axis.height = 0;
         axis.setTimeTick = function (timeTick) {
             axis.timeTick = timeTick;
             axis.timeTick.addCallback(axis.onGenerateTick);
@@ -383,7 +397,19 @@ var PeriodAxis = {
         axis.createValueAxis = function (column, minColumn, maxColumn, decimalColumn, x, y, height) {
             var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn, decimalColumn, x, y, height);
             axis.valueAxisList.push(valueAxis);
+            axis.addAxisY(valueAxis);
             return valueAxis;
+        };
+
+        axis.createAxisY = function (x, y, height) {
+            var axisY = AxisY.createNew(x, y, height);
+            axis.addAxisY(axisY);
+            return axisY;
+        };
+
+        axis.addAxisY = function (axisY) {
+            axis.height += axisY.height;
+            axis.axisYList.push(axisY);
         };
 
         axis.convertX = function (index) {
@@ -566,16 +592,17 @@ var RunChart = {
         };
 
         chart.mouseMove = function () {
+            if(!chart.mouse.inChartArea)return;
             var periodAxis = chart.periodAxis;
             chart.mouse.index = periodAxis.convertIndex(chart.mouse.x);
-            chart.mouse.inChartArea = (chart.mouse.x >= chart.area.x + periodAxis.scale && chart.mouse.x <= chart.area.right - periodAxis.scale);
-
+            chart.mouse.inAxisArea = (chart.mouse.x >= chart.area.x + periodAxis.scale && chart.mouse.x <= chart.area.right - periodAxis.scale) &&
+            (chart.mouse.y <= chart.area.y && chart.mouse.y >= chart.area.top);
             chart.layerManager.clearLayer(2);
             chart.mouse.drawChartLayer(chart, 2);
         };
 
         chart.mouseDown = function () {
-            if (chart.mouse.inChartArea) {
+            if (chart.mouse.inAxisArea) {
                 chart.mouse.dragging = true;
             }
         };
@@ -587,7 +614,7 @@ var RunChart = {
 
         chart.mouseUp = function () {
             chart.mouse.dragging = false;
-            if (chart.mouse.inChartArea) {
+            if (chart.mouse.inAxisArea) {
                 chart.mouseMove();
             }
         };

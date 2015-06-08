@@ -239,9 +239,9 @@ Deflate.prototype.push = function(data, mode) {
     }
     if (strm.avail_out === 0 || (strm.avail_in === 0 && _mode === Z_FINISH)) {
       if (this.options.to === 'string') {
-        this.onBoardData(strings.buf2binstring(utils.shrinkBuf(strm.output, strm.next_out)));
+        this.onFutureData(strings.buf2binstring(utils.shrinkBuf(strm.output, strm.next_out)));
       } else {
-        this.onBoardData(utils.shrinkBuf(strm.output, strm.next_out));
+        this.onFutureData(utils.shrinkBuf(strm.output, strm.next_out));
       }
     }
   } while ((strm.avail_in > 0 || strm.avail_out === 0) && status !== Z_STREAM_END);
@@ -267,7 +267,7 @@ Deflate.prototype.push = function(data, mode) {
  * By default, stores data blocks in `chunks[]` property and glue
  * those in `onEnd`. Override this handler, if you need another behaviour.
  **/
-Deflate.prototype.onBoardData = function(chunk) {
+Deflate.prototype.onFutureData = function(chunk) {
   this.chunks.push(chunk);
 };
 
@@ -596,10 +596,10 @@ Inflate.prototype.push = function(data, mode) {
           strm.avail_out = chunkSize - tail;
           if (tail) { utils.arraySet(strm.output, strm.output, next_out_utf8, tail, 0); }
 
-          this.onBoardData(utf8str);
+          this.onFutureData(utf8str);
 
         } else {
-          this.onBoardData(utils.shrinkBuf(strm.output, strm.next_out));
+          this.onFutureData(utils.shrinkBuf(strm.output, strm.next_out));
         }
       }
     }
@@ -629,7 +629,7 @@ Inflate.prototype.push = function(data, mode) {
  * By default, stores data blocks in `chunks[]` property and glue
  * those in `onEnd`. Override this handler, if you need another behaviour.
  **/
-Inflate.prototype.onBoardData = function(chunk) {
+Inflate.prototype.onFutureData = function(chunk) {
   this.chunks.push(chunk);
 };
 

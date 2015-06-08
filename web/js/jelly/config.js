@@ -1,9 +1,9 @@
 /**
  * Created by user on 2015/5/21.
  */
-QuoteColumn.prototype.STR_TYPE = "str";
-QuoteColumn.prototype.INT_TYPE = "int";
-QuoteColumn.prototype.FLOAT_TYPE = "float";
+FutureColumn.prototype.STR_TYPE = "str";
+FutureColumn.prototype.INT_TYPE = "int";
+FutureColumn.prototype.FLOAT_TYPE = "float";
 var config = {
     quoteWsUrl: "ws://122.152.162.81:10890/websocket",
     kChartWsUrl: "ws://122.152.162.81:10891/websocket",
@@ -69,6 +69,55 @@ var config = {
         log(boardObj.kChartDataList);
         log("maxVolume=%s", boardObj.volumeMax);
     },
+    boardDataFormat: function (columnMap,data) {
+        var obj = {};
+        var firstCommaIndex = data.indexOf(",");
+        var code = data.substring(0, firstCommaIndex);
+        obj.code = code.replace("G|", "");
+        var str = data.substring(firstCommaIndex + 1);
+        var key = null;
+        //time("quoteFormat");
+        var count = 0;
+        var futureColumn = undefined;
+        while (str.length > 0) {
+            key = str.substr(0, 1);
+            if (columnMap.hasOwnProperty("key" + key)) {
+                futureColumn = columnMap["key" + key];
+                firstCommaIndex = str.indexOf(",", 1);
+                switch (futureColumn.type) {
+                    case FutureColumn.prototype.STR_TYPE:
+                        obj[futureColumn.name] = str.substring(1, firstCommaIndex);
+                        break;
+                    case FutureColumn.prototype.INT_TYPE:
+                        obj[futureColumn.name] = parseInt(str.substring(1, firstCommaIndex));
+                        break;
+                    case FutureColumn.prototype.FLOAT_TYPE:
+                        obj[futureColumn.name] = parseFloat(str.substring(1, firstCommaIndex));
+                        break;
+                }
+                if (firstCommaIndex != -1) {
+                    str = str.substring(firstCommaIndex + 1);
+                } else {
+                    str = "";
+                }
+            } else {
+                firstCommaIndex = str.indexOf(",", 1);
+                if (firstCommaIndex != -1) {
+                    str = str.substring(firstCommaIndex + 1);
+                } else {
+                    break;
+                }
+            }
+            count++;
+            if (count > 100) {//for prevent infinite loop...
+                break;
+            }
+            //log("%s=%s",count,str);
+        }
+        //timeEnd("quoteFormat");
+        //log(obj);
+        return obj;
+    },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
     futureList: [
         new Future("6ECC", "歐元期", 1.22, "060000", "050000"),
@@ -102,81 +151,81 @@ var config = {
         "TXCC": "台指期",
         "YMCC": "道瓊期"
     },
-    quoteColumnList:[
-        new QuoteColumn(",","bid6","委買價6",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("-","bid7","委買價7",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn(".","bid8","委買價8",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("/","bid9","委買價9",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("0","bid10","委買價10",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("1","bidVolume6","委買量6",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("2","bidVolume7","委買量7",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("3","bidVolume8","委買量8",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("4","bidVolume9","委買量9",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("5","bidVolume10","委買量10",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("6","ask6","委賣價6",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("7","ask7","委賣價7",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("8","ask8","委賣價8",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("9","ask9","委賣價9",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn(":","ask10","委賣價10",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn(";","askVolume6","委賣量6",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("<","askVolume7","委賣量7",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn(">","askVolume8","委賣量8",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("?","askVolume9","委賣量9",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("@","askVolume10","委賣量10",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("A","tickTime","成交時間",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("B","scale","小數點",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("C","last","成交價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("D","bid","委買價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("E","ask","委賣價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("F","totalVolume","總量",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("G","high","最高價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("H","low","最低價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("I","open","開盤價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("J","close","收盤價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("K","netChange","於上一價漲跌",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("L","preClose","昨收",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("M","oi","未平倉量",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("N","upDown","漲跌",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("O","upDownPercentage","漲跌幅",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("P","volume","單量",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("Q","quoteIndex","報價索引",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("R","","",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("S","type","E=股票;W=權證;F=期貨;X=外匯;O=選擇權",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("T","status","T=正常交易; P=暫停交易; O=零股交易; U=已下市; A=盤後交易;  R=盤前交易",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("U","settlementPrice","結算價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("V","highLimit","漲停價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("W","lowLimit","跌停價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("X","preDayVolume","昨量",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("Y","volumePreW","成交價量",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("Z","bidVolume","委買量",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("[","askVolume","委賣量",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("\\","tradeDate","本交易日",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("]","expireDate","期貨到期日",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("^","strikePrice","履約價",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("_","chineseName","中文名",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("`","quoteDate","報價日期",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("a","bid2","委買價2",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("b","bid3","委買價3",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("c","bid4","委買價4",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("d","bid5","委買價5",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("e","bidVolume2","委買量2",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("f","bidVolume3","委買量3",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("g","bidVolume4","委買量4",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("h","bidVolume5","委買量5",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("i","ask2","委賣價2",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("j","ask3","委賣價3",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("k","ask4","委賣價4",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("l","ask5","委賣價5",QuoteColumn.prototype.FLOAT_TYPE),
-        new QuoteColumn("m","askVolume2","委賣量2",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("n","askVolume3","委賣量3",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("o","askVolume4","委賣量4",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("p","askVolume5","委賣量5",QuoteColumn.prototype.INT_TYPE),
-        new QuoteColumn("q","monthCode","月份碼",QuoteColumn.prototype.STR_TYPE),
-        new QuoteColumn("r","settlementDay","結算日",QuoteColumn.prototype.STR_TYPE)
+    futureColumnList: [
+        new FutureColumn(",", "bid6", "委買價6", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("-", "bid7", "委買價7", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn(".", "bid8", "委買價8", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("/", "bid9", "委買價9", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("0", "bid10", "委買價10", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("1", "bidVolume6", "委買量6", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("2", "bidVolume7", "委買量7", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("3", "bidVolume8", "委買量8", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("4", "bidVolume9", "委買量9", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("5", "bidVolume10", "委買量10", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("6", "ask6", "委賣價6", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("7", "ask7", "委賣價7", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("8", "ask8", "委賣價8", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("9", "ask9", "委賣價9", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn(":", "ask10", "委賣價10", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn(";", "askVolume6", "委賣量6", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("<", "askVolume7", "委賣量7", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn(">", "askVolume8", "委賣量8", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("?", "askVolume9", "委賣量9", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("@", "askVolume10", "委賣量10", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("A", "tickTime", "成交時間", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("B", "scale", "小數點", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("C", "last", "成交價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("D", "bid", "委買價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("E", "ask", "委賣價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("F", "totalVolume", "總量", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("G", "high", "最高價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("H", "low", "最低價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("I", "open", "開盤價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("J", "close", "收盤價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("K", "netChange", "於上一價漲跌", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("L", "preClose", "昨收", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("M", "oi", "未平倉量", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("N", "upDown", "漲跌", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("O", "upDownPercentage", "漲跌幅", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("P", "volume", "單量", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("Q", "quoteIndex", "報價索引", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("R", "", "", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("S", "type", "E=股票;W=權證;F=期貨;X=外匯;O=選擇權", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("T", "status", "T=正常交易; P=暫停交易; O=零股交易; U=已下市; A=盤後交易;  R=盤前交易", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("U", "settlementPrice", "結算價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("V", "highLimit", "漲停價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("W", "lowLimit", "跌停價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("X", "preDayVolume", "昨量", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("Y", "volumePreW", "成交價量", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("Z", "bidVolume", "委買量", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("[", "askVolume", "委賣量", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("\\", "tradeDate", "本交易日", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("]", "expireDate", "期貨到期日", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("^", "strikePrice", "履約價", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("_", "chineseName", "中文名", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("`", "quoteDate", "報價日期", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("a", "bid2", "委買價2", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("b", "bid3", "委買價3", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("c", "bid4", "委買價4", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("d", "bid5", "委買價5", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("e", "bidVolume2", "委買量2", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("f", "bidVolume3", "委買量3", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("g", "bidVolume4", "委買量4", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("h", "bidVolume5", "委買量5", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("i", "ask2", "委賣價2", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("j", "ask3", "委賣價3", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("k", "ask4", "委賣價4", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("l", "ask5", "委賣價5", FutureColumn.prototype.FLOAT_TYPE),
+        new FutureColumn("m", "askVolume2", "委賣量2", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("n", "askVolume3", "委賣量3", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("o", "askVolume4", "委賣量4", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("p", "askVolume5", "委賣量5", FutureColumn.prototype.INT_TYPE),
+        new FutureColumn("q", "monthCode", "月份碼", FutureColumn.prototype.STR_TYPE),
+        new FutureColumn("r", "settlementDay", "結算日", FutureColumn.prototype.STR_TYPE)
     ]
 };
 
-function QuoteColumn(key,name,describe,type){
+function FutureColumn(key, name, describe, type) {
     this.key = key;
     this.name = name;
     this.describe = describe;

@@ -31,7 +31,7 @@ var DrawStyle = {
             //mouseCtx
             var mouse = runChart.mouse;
             var periodAxis = runChart.periodAxis;
-            if (mouse.inChartArea) {
+            if (mouse.inAxisArea) {
                 if (mouse.dragging) {
                     //var newStartIndex = -1;
                     //if (mouse.x > mouse.lastX && periodAxis.endIndex < runChart.dataDriven.count - 1) {

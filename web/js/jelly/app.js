@@ -4,52 +4,57 @@
 var Client = {
     createNew: function () {
         var client = {};
-        client.boardGoodsMap = {};
+        client.futureGoodsMap = {};
         client.quoteWsm = WebSocketManager.createNew(config.quoteWsUrl, "board");
         client.kChartWsm = WebSocketManager.createNew(config.kChartWsUrl, "kChart");
         client.columnMap = {};
-        client.boardDataManager = undefined;
-        client.boardTable = undefined;
-        client.boardDataTotal = 0;
-        client.boardDataLoaded = 0;
-        client.boardDataList = [];
+        client.futureDataManager = undefined;
+        client.futureTable = undefined;
+        client.futureDataTotal = 0;
+        client.futureDataLoaded = 0;
+        client.futureDataList = [];
         client.runChartIndex = -1;
 
         client.init = function () {
             var i;
-            var count = config.quoteColumnList.length;
-            var quoteColumn = undefined;
+            var count = config.futureColumnList.length;
+            var futureColumn = undefined;
             for (i = 0; i < count; i++) {
-                quoteColumn = config.quoteColumnList[i];
-                client.columnMap["key" + quoteColumn.key] = quoteColumn;
+                futureColumn = config.futureColumnList[i];
+                client.columnMap["key" + futureColumn.key] = futureColumn;
             }
             //log(client.columnMap);
             var bg = undefined;
-            client.boardDataTotal = 0;
+            client.futureDataTotal = 0;
             for (i = 0; i < config.futureList.length; i++) {
-                bg = new BoardGoods(config.futureList[i], client.boardDataTotal);
-                bg.boardRequestData = config.getBoardRequest(bg.code, bg.boardMid);
-                bg.boardRegisterRequestData = config.getBoardRegisterRequest(bg.code, bg.boardMid);
-                bg.boardUnRegisterRequestData = config.getBoardUnRegisterRequest(bg.code, bg.boardMid);
-                client.boardGoodsMap[bg.code] = bg;
-                client.boardDataTotal++;
+                bg = new FutureGoods(config.futureList[i], client.futureDataTotal);
+                bg.futureTelegram.setWebSocketManager( client.quoteWsm);
+                bg.futureRegisterTelegram.setWebSocketManager( client.quoteWsm);
+                bg.futureUnRegisterTelegram.setWebSocketManager( client.quoteWsm);
+                bg.kChartTelegram.setWebSocketManager(client.kChartWsm);
+                bg.futureTelegram.setRequest(config.getBoardRequest(bg.code, bg.boardMid));
+                bg.futureRegisterTelegram.setRequest(config.getBoardRegisterRequest(bg.code, bg.boardMid));
+                bg.futureUnRegisterTelegram.setRequest(config.getBoardUnRegisterRequest(bg.code, bg.boardMid));
+                //bg.boardUnRegisterRequestData = config.getBoardUnRegisterRequest(bg.code, bg.boardMid);
+                client.futureGoodsMap[bg.code] = bg;
+                client.futureDataTotal++;
             }
 
             client.runChartManager = runChartManager.createNew();
 
-            client.boardTable = ReportTable.createNew("boardTable");
-            client.boardTable.addTdClassRenderer("upDown", client.getBoardUpDownClass);
-            client.boardDataManager = ReportDataManager.createNew(false);
-            client.boardDataManager.addTable(client.boardTable);
-            $(document).on("rowClick", client.onBoardClick);
+            client.futureTable = ReportTable.createNew("futureTable");
+            client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
+            client.futureDataManager = ReportDataManager.createNew(false);
+            client.futureDataManager.addTable(client.futureTable);
+            $(document).on("rowClick", client.onBoardRowClick);
             $(window).on("beforeunload", function () {
                 client.stop();
             });
         };
 
         client.connect = function () {
-            client.quoteWsm.onState(client.onBoardState);
-            client.quoteWsm.onData(client.onBoardData);
+            client.quoteWsm.onState(client.onFutureState);
+            client.quoteWsm.onData(client.onFutureData);
             client.kChartWsm.onState(client.onKChartState);
             client.kChartWsm.onData(client.onKChartData);
 
@@ -59,18 +64,19 @@ var Client = {
 
         client.stop = function () {
             var bg = undefined;
-            for (var code in client.boardGoodsMap) {
-                bg = client.boardGoodsMap[code];
-                client.quoteWsm.send(bg.boardUnRegisterRequestData);
+            for (var code in client.futureGoodsMap) {
+                bg = client.futureGoodsMap[code];
+                bg.futureUnRegisterTelegram.sendRequest();
+                //client.quoteWsm.send(bg.futureUnRegisterTelegram.requestText);
             }
             client.quoteWsm.close();
             client.kChartWsm.close();
         };
 
-        client.onBoardState = function (evt, readyState) {
+        client.onFutureState = function (evt, readyState) {
             log("board state=%s", readyState);
             if (readyState == 1) {
-                client.requestBoard();
+                client.requestFuture();
             }
         };
 
@@ -78,13 +84,13 @@ var Client = {
             log("kChart state=%s", readyState);
         };
 
-        client.onBoardData = function (evt, data) {
+        client.onFutureData = function (evt, data) {
             //log("onBoardData");
             var temp = JSON.parse(data);
             var obj, bg, code;
             if (temp.tp == "p") {//push
-                obj = client.quoteFormat(JSON.parse(temp.c).data);
-                bg = client.boardGoodsMap[obj.code];//with out mid
+                obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
+                bg = client.futureGoodsMap[obj.code];//with out mid
                 bg.boardPushData = data;
                 //log(obj);
                 if (client.runChartIndex == bg.index) {
@@ -93,19 +99,19 @@ var Client = {
                 }
                 bg.updateBoardObj(obj);
 
-                client.boardDataManager.updateRowData(bg.index, obj);
+                client.futureDataManager.updateRowData(bg.index, obj);
             } else if (temp.tp == "s") {
                 if (temp.tr == "5003") {
-                    obj = client.quoteFormat(JSON.parse(temp.c).data);
-                    bg = client.getBoardGoodsByMid(temp.mid);
+                    obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
+                    bg = client.getFutureGoodsByMid(temp.mid);
                     bg.setBoardObj(obj);
-                    bg.boardResponseData = data;
+                    bg.futureTelegram.setResponse(data,temp);
                     //if(error)//錯誤還沒處理
-                    client.addBoardData(bg.boardObj);
+                    client.addFutureData(bg.boardObj);
                 } else if (temp.tr == "5001") {
                     obj = JSON.parse(temp.c);
-                    bg = client.getBoardGoodsByMid(temp.mid);
-                    bg.boardRegisterResponseData = data;
+                    bg = client.getFutureGoodsByMid(temp.mid);
+                    bg.futureRegisterTelegram.setResponse(data,temp);
                 }
             }
         };
@@ -115,9 +121,8 @@ var Client = {
             var temp = JSON.parse(data);
             if (temp.tp == "s") {
                 if (temp.tr == "1002") {
-                    var bg = client.getBoardGoodsByMid(temp.mid);
-                    bg.kChartResponseData = data;
-                    bg.kChartResponseObject = temp;
+                    var bg = client.getFutureGoodsByMid(temp.mid);
+                    bg.kChartTelegram.setResponse(data,temp);
                     if (temp.error == "1") {
                         var c = JSON.parse(temp.c);
                         if (typeof c !== typeof undefined && c.hasOwnProperty("ec")) {
@@ -130,51 +135,54 @@ var Client = {
             }
         };
 
-        client.addBoardData = function (data) {
+        client.addFutureData = function (data) {
             //log(data);
-            client.boardDataLoaded++;
-            client.boardDataList.push(data);
-            if (client.boardDataLoaded == client.boardDataTotal) {
-                client.boardDataManager.setDataSource(client.boardDataList);
+            client.futureDataLoaded++;
+            client.futureDataList.push(data);
+            if (client.futureDataLoaded == client.futureDataTotal) {
+                client.futureDataManager.setDataSource(client.futureDataList);
                 client.requestRegisterBoard();
                 client.requestKChart(0);
             }
         };
 
-        client.onBoardClick = function (e, tableClass, rowIndex, rowData) {
-            client.requestKChart(rowIndex);
+        client.onBoardRowClick = function (e, tableClass, rowIndex, rowData) {
+            for (var i = 0; i < client.futureDataList.length; i++) {
+                if (client.futureDataList[i].code == rowData.code) {
+                    client.requestKChart(i);
+                }
+            }
         };
 
-        client.requestBoard = function () {
-            for (var key in client.boardGoodsMap) {
-                client.quoteWsm.send(client.boardGoodsMap[key].boardRequestData);
+        client.requestFuture = function () {
+            for (var key in client.futureGoodsMap) {
+                client.futureGoodsMap[key].futureTelegram.sendRequest();
             }
         };
 
         client.requestRegisterBoard = function () {
-            for (var key in client.boardGoodsMap) {
-                client.quoteWsm.send(client.boardGoodsMap[key].boardRegisterRequestData);
+            for (var key in client.futureGoodsMap) {
+                client.futureGoodsMap[key].futureRegisterTelegram.sendRequest();
             }
         };
 
         client.requestKChart = function (index) {
             log("requestKChart:%s", index);
             var bg;
-            for (var key in client.boardGoodsMap) {
-                bg = client.boardGoodsMap[key];
+            for (var key in client.futureGoodsMap) {
+                bg = client.futureGoodsMap[key];
                 if (bg.index == index) {
                     break;
                 }
             }
 
-            //bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1);
-            bg.kChartRequestData = config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1);
-            client.kChartWsm.send(bg.kChartRequestData);
+            bg.kChartTelegram.setRequest(config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1));
+            bg.kChartTelegram.sendRequest();
         };
 
         client.onKChartDataLoaded = function (temp) {
             log("onKChartDataLoaded mid=%s", temp.mid);
-            var bg = client.getBoardGoodsByMid(temp.mid);
+            var bg = client.getFutureGoodsByMid(temp.mid);
             //進來的資料,時間近的在前面
             //而且不是每秒都有
             //20150527 資料只有1360筆 時間筆數06:00~05:00為1380筆 差了20筆
@@ -183,64 +191,10 @@ var Client = {
             client.runChartManager.show(bg.boardObj);
         };
 
-        client.goodsCodeFormat = function (data) {
-            return data.replace("G|", "");
-        };
-
-        client.quoteFormat = function (data) {
-            var obj = {};
-            var firstCommaIndex = data.indexOf(",");
-            var code = data.substring(0, firstCommaIndex);
-            obj.code = code.replace("G|", "");
-            var str = data.substring(firstCommaIndex + 1);
-            var key = null;
-            //time("quoteFormat");
-            var count = 0;
-            var quoteColumn = undefined;
-            while (str.length > 0) {
-                key = str.substr(0, 1);
-                if (client.columnMap.hasOwnProperty("key" + key)) {
-                    quoteColumn = client.columnMap["key" + key];
-                    firstCommaIndex = str.indexOf(",", 1);
-                    switch (quoteColumn.type) {
-                        case QuoteColumn.prototype.STR_TYPE:
-                            obj[quoteColumn.name] = str.substring(1, firstCommaIndex);
-                            break;
-                        case QuoteColumn.prototype.INT_TYPE:
-                            obj[quoteColumn.name] = parseInt(str.substring(1, firstCommaIndex));
-                            break;
-                        case QuoteColumn.prototype.FLOAT_TYPE:
-                            obj[quoteColumn.name] = parseFloat(str.substring(1, firstCommaIndex));
-                            break;
-                    }
-                    if (firstCommaIndex != -1) {
-                        str = str.substring(firstCommaIndex + 1);
-                    } else {
-                        str = "";
-                    }
-                } else {
-                    firstCommaIndex = str.indexOf(",", 1);
-                    if (firstCommaIndex != -1) {
-                        str = str.substring(firstCommaIndex + 1);
-                    } else {
-                        break;
-                    }
-                }
-                count++;
-                if (count > 100) {//for prevent infinite loop...
-                    break;
-                }
-                //log("%s=%s",count,str);
-            }
-            //timeEnd("quoteFormat");
-            //log(obj);
-            return obj;
-        };
-
-        client.getBoardGoodsByMid = function (mid) {
+        client.getFutureGoodsByMid = function (mid) {
             var bg = undefined;
-            for (var key in client.boardGoodsMap) {
-                bg = client.boardGoodsMap[key];
+            for (var key in client.futureGoodsMap) {
+                bg = client.futureGoodsMap[key];
                 if (bg.boardMid == mid) {
                     return bg;
                 }
@@ -248,11 +202,11 @@ var Client = {
             return undefined;
         };
 
-        client.getBoardUpDownClass = function (rowData) {
+        client.getFutureUpDownClass = function (rowData) {
             if (rowData.upDown > 0) {
-                return "boardUpColor";
+                return "futureUpColor";
             } else {
-                return "boardDownColor";
+                return "futureDownColor";
             }
         };
 
@@ -308,11 +262,14 @@ var runChartManager = {
             chart.padding(100, 20, 100, 40);
             chart.init();
             var area = chart.area;
+
             var spaceHeight = area.height / 20;
+            var volumeAxisHeight = area.height / 4;
+            var valueAxisHeight = area.height - volumeAxisHeight - spaceHeight;
 
             var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);
-            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, area.height / 4);
-            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, area.height - volumeAxis.height - spaceHeight);
+            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, volumeAxisHeight);
+            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, valueAxisHeight);
             var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
 
             var drawStyle = DrawStyle.createNew(chart);
@@ -337,7 +294,31 @@ var runChartManager = {
     }
 };
 
-function BoardGoods(future, i) {
+function Telegram(){
+    this.requestText = undefined;
+    this.responseText = undefined;
+    this.responseObj = undefined;
+    var t = this;
+
+    this.setWebSocketManager = function (wsm) {
+        t.wsm = wsm;
+    };
+
+    this.sendRequest = function () {
+        t.wsm.send(t.requestText);
+    };
+
+    this.setRequest = function (text) {
+        t.requestText = text;
+    };
+
+    this.setResponse = function (text,obj) {
+        t.responseText = text;
+        t.responseObj = obj;
+    };
+}
+
+function FutureGoods(future, i) {
     this.index = i;
     this.code = future.code;
     this.name = future.name;
@@ -345,16 +326,10 @@ function BoardGoods(future, i) {
     this.startTime = future.startTime;
     this.endTime = future.endTime;
     this.boardMid = "boardGoods" + i;
-    this.boardRegisterMid = "boardGoodsRegister" + i;
-    this.boardRequestData = undefined;
-    this.boardRegisterRequestData = undefined;
-    this.boardUnRegisterRequestData = undefined;
-    this.kChartRequestData = undefined;
-    this.boardResponseData = undefined;
-    this.boardRegisterResponseData = undefined;
-    this.boardUnRegisterResponseData = undefined;
-    this.kChartResponseData = undefined;
-    this.kChartResponseObject = undefined;
+    this.futureTelegram = new Telegram();
+    this.futureRegisterTelegram = new Telegram();
+    this.futureUnRegisterTelegram = new Telegram();
+    this.kChartTelegram = new Telegram();
     this.boardPushData = undefined;
     this.boardObj = undefined;
     var bg = this;
@@ -377,7 +352,6 @@ function BoardGoods(future, i) {
         //log("last=%s,preClose=%s,upDown=%s,upDownPercentage=%s",data.last,data.preClose,data.upDown,data.upDownPercentage);
         bg.calculate();
         //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
-
     };
 
     this.updateTick = function (obj) {

@@ -8,6 +8,7 @@ var Client = {
         client.quoteWsm = WebSocketManager.createNew(config.quoteWsUrl, "board");
         client.kChartWsm = WebSocketManager.createNew(config.kChartWsUrl, "kChart");
         client.columnMap = {};
+        client.canvasTable = undefined;
         client.futureDataManager = undefined;
         client.futureTable = undefined;
         client.futureDataTotal = 0;
@@ -46,10 +47,32 @@ var Client = {
             client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
             client.futureDataManager = ReportDataManager.createNew(false);
             client.futureDataManager.addTable(client.futureTable);
+
+            client.initCanvasTable();
+
             $(document).on("rowClick", client.onBoardRowClick);
             $(window).on("beforeunload", function () {
                 client.stop();
             });
+        };
+
+        client.initCanvasTable = function () {
+            client.canvasTable = CanvasTable.createNew(document.getElementById("tableCanvas"));
+            client.canvasTable.addColumn(CanvasColumn.createNew("code","代號"));
+            client.canvasTable.addColumn(CanvasColumn.createNew("name","商品"));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid","委買價",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("ask","委賣價",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume","單量"));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume","成交量"));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDownPercentage","漲跌幅",{decimal:2}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("high","最高價",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("low","最低價",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("open","開盤價",{decimal:"scale"}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("tradeDate","交易日"));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("tickTime","更新時間"));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale"}));
         };
 
         client.connect = function () {
@@ -141,8 +164,11 @@ var Client = {
             client.futureDataList.push(data);
             if (client.futureDataLoaded == client.futureDataTotal) {
                 client.futureDataManager.setDataSource(client.futureDataList);
+                client.canvasTable.setDataSource(client.futureDataList);
                 client.requestRegisterBoard();
                 client.requestKChart(0);
+
+                client.canvasTable.render();
             }
         };
 

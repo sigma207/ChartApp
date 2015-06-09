@@ -185,10 +185,6 @@ var ReportTable = {
         dt.$table = $("." + dt.tableClass);
         dt.$headTr = dt.$table.find("thead>tr");
         dt.$thArrowDiv;
-        dt.pageNo = 0;
-        dt.pageCount = 30;
-        dt.usePage = false;
-        dt.pageInit = false;
         /**
          * The temporary array of all thObj, It will be use when generateTr().
          * In order to reduce DOM operation.

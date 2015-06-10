@@ -48,7 +48,7 @@ var Client = {
             client.futureDataManager = ReportDataManager.createNew(false);
             client.futureDataManager.addTable(client.futureTable);
 
-            client.initCanvasTable();
+            //client.initCanvasTable();
 
             $(document).on("rowClick", client.onBoardRowClick);
             $(window).on("beforeunload", function () {
@@ -58,21 +58,26 @@ var Client = {
 
         client.initCanvasTable = function () {
             client.canvasTable = CanvasTable.createNew(document.getElementById("tableCanvas"));
-            client.canvasTable.addColumn(CanvasColumn.createNew("code","代號"));
-            client.canvasTable.addColumn(CanvasColumn.createNew("name","商品"));
+            client.canvasTable.addColumn(CanvasColumn.createNew("code","代號",{textFillStyle:FutureTableDrawStyle.CODE_COLOR}));
+            client.canvasTable.addColumn(CanvasColumn.createNew("name","商品",{textFillStyle:FutureTableDrawStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid","委買價",{decimal:"scale"}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("ask","委賣價",{decimal:"scale"}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume","單量"));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume","成交量"));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{textFillStyle:FutureTableDrawStyle.VOLUME_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume","成交量",{textFillStyle:FutureTableDrawStyle.VOLUME_COLOR}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:"scale"}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDownPercentage","漲跌幅",{decimal:2}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("high","最高價",{decimal:"scale"}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("low","最低價",{decimal:"scale"}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("open","開盤價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("tradeDate","交易日"));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("tickTime","更新時間"));
+            client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate","交易日",{textFillStyle:FutureTableDrawStyle.DEFAULT_COLOR}));
+            client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime","更新時間",{textFillStyle:FutureTableDrawStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale"}));
+            var tableDrawStyle = FutureTableDrawStyle.createNew(client.canvasTable);
+            client.canvasTable.renderHeadRowBackground = tableDrawStyle.headBackground;
+            client.canvasTable.renderBodyRowBackground = tableDrawStyle.bodyRowBackground;
+            client.canvasTable.setColumnHeadContentRender(tableDrawStyle.headContent);
+            client.canvasTable.setColumnCellContentRender(tableDrawStyle.cellContent);
         };
 
         client.connect = function () {
@@ -164,11 +169,11 @@ var Client = {
             client.futureDataList.push(data);
             if (client.futureDataLoaded == client.futureDataTotal) {
                 client.futureDataManager.setDataSource(client.futureDataList);
-                client.canvasTable.setDataSource(client.futureDataList);
+                //client.canvasTable.setDataSource(client.futureDataList);
                 client.requestRegisterBoard();
                 client.requestKChart(0);
 
-                client.canvasTable.render();
+                //client.canvasTable.render();
             }
         };
 
@@ -290,7 +295,7 @@ var runChartManager = {
             var area = chart.area;
 
             var spaceHeight = area.height / 20;
-            var volumeAxisHeight = area.height / 4;
+            var volumeAxisHeight = area.height / 2;
             var valueAxisHeight = area.height - volumeAxisHeight - spaceHeight;
 
             var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);

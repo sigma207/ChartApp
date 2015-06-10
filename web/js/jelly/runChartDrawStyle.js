@@ -14,7 +14,7 @@ var DrawStyle = {
         ds.drawBackground = function (ctx) {
             var chart = this;
             ctx.save();
-            ctx.fillStyle = "black";
+            ctx.fillStyle = "#1c1c1c";
             ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             ctx.lineWidth = DrawStyle.TICK_LINE_WIDTH;
             ctx.strokeStyle = DrawStyle.TICK_COLOR;
@@ -115,20 +115,52 @@ var DrawStyle = {
                 }
                 //log("i=%s,time=%s,close=%s,volume=%s", i,data.time,data.close,data.volume);
             } else if (valueAxis.column == "volume") {
-                ctx.strokeStyle = DrawStyle.VOLUME_TEXT_COLOR;
-                ctx.fillStyle = DrawStyle.VOLUME_TEXT_COLOR;
-                var startX, endX, quarterScale = periodAxis.scale / 4;
+                //#5f8cb6   #1f5b97 #2a3a4a
+                //ctx.strokeStyle = DrawStyle.VOLUME_TEXT_COLOR;
+                //ctx.strokeStyle = "#1f5b97";
+                //ctx.fillStyle = DrawStyle.VOLUME_TEXT_COLOR;
+                ctx.fillStyle = "#5f8cb6";
+                console.log("periodAxis.scale=%s",periodAxis.scale);
+                var borderFixWidth = periodAxis.scale / 3;
+                var contentFixWidth = periodAxis.scale / 5;
+                var startX, endX;
                 ctx.beginPath();
                 for (i = dataDriven.dataStartIndex; i <= dataDriven.dataEndIndex; i++) {
                     data = list[i];
-                    startX = data.x - quarterScale;
-                    endX = data.x + quarterScale;
+                    startX = data.x - borderFixWidth;
+                    endX = data.x + borderFixWidth;
                     ctx.moveTo(startX, valueAxis.y);
                     ctx.lineTo(startX, data[valueAxis.column + "Y"]);
                     ctx.lineTo(endX, data[valueAxis.column + "Y"]);
                     ctx.lineTo(endX, valueAxis.y);
                 }
-                ctx.stroke();
+                //ctx.stroke();
+                ctx.fill();
+
+                ctx.fillStyle = "#1f5b97";
+                ctx.beginPath();
+                for (i = dataDriven.dataStartIndex; i <= dataDriven.dataEndIndex; i++) {
+                    data = list[i];
+                    startX = data.x - contentFixWidth;
+                    endX = data.x + contentFixWidth;
+                    ctx.moveTo(startX, valueAxis.y);
+                    ctx.lineTo(startX, data[valueAxis.column + "Y"]+1);
+                    ctx.lineTo(endX, data[valueAxis.column + "Y"]+1);
+                    ctx.lineTo(endX, valueAxis.y);
+                }
+                ctx.fill();
+
+                ctx.fillStyle = "#2a3a4a";
+                ctx.beginPath();
+                for (i = dataDriven.dataStartIndex; i <= dataDriven.dataEndIndex; i++) {
+                    data = list[i];
+                    startX = data.x + contentFixWidth;
+                    endX = data.x + borderFixWidth;
+                    ctx.moveTo(startX, valueAxis.y);
+                    ctx.lineTo(startX, data[valueAxis.column + "Y"]+1);
+                    ctx.lineTo(endX, data[valueAxis.column + "Y"]+1);
+                    ctx.lineTo(endX, valueAxis.y);
+                }
                 ctx.fill();
             }
             ctx.restore();

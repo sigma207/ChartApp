@@ -22,7 +22,10 @@ var LayerManager = {
         cm.baseLayer = undefined;
         cm.addBaseLayer = function (canvas) {
             cm.baseLayer = CanvasLayer.createNew(canvas.id, canvas);
+            var parent = $(cm.baseLayer.canvas).parent();
             $(cm.baseLayer.canvas).css("position", "absolute");
+            $(cm.baseLayer.canvas).attr("width", parent.css("width"));
+            $(cm.baseLayer.canvas).attr("height", parent.css("height"));
             cm.layerList.push(cm.baseLayer);
         };
         cm.addLayer = function (id) {
@@ -40,6 +43,7 @@ var LayerManager = {
             cm.layerList.push(layer);
             return layer;
         };
+
         cm.getLayer = function (index) {
             return cm.layerList[index];
         };

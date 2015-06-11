@@ -14,7 +14,7 @@ var Client = {
         client.futureDataTotal = 0;
         client.futureDataLoaded = 0;
         client.futureDataList = [];
-        client.runChartIndex = -1;
+        client.runChartCode = "";
 
         client.init = function () {
             var i;
@@ -45,10 +45,10 @@ var Client = {
 
             client.futureTable = ReportTable.createNew("futureTable");
             client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
-            client.futureDataManager = ReportDataManager.createNew(false);
+            client.futureDataManager = DataSourceManager.createNew(false);
             client.futureDataManager.addTable(client.futureTable);
 
-            //client.initCanvasTable();
+            client.initCanvasTable();
 
             $(document).on("rowClick", client.onBoardRowClick);
             $(window).on("beforeunload", function () {
@@ -58,22 +58,22 @@ var Client = {
 
         client.initCanvasTable = function () {
             client.canvasTable = CanvasTable.createNew(document.getElementById("tableCanvas"));
-            client.canvasTable.addColumn(CanvasColumn.createNew("code","代號",{textFillStyle:FutureTableDrawStyle.CODE_COLOR}));
-            client.canvasTable.addColumn(CanvasColumn.createNew("name","商品",{textFillStyle:FutureTableDrawStyle.DEFAULT_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid","委買價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("ask","委賣價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{textFillStyle:FutureTableDrawStyle.VOLUME_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume","成交量",{textFillStyle:FutureTableDrawStyle.VOLUME_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDownPercentage","漲跌幅",{decimal:2}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("high","最高價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("low","最低價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("open","開盤價",{decimal:"scale"}));
-            client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate","交易日",{textFillStyle:FutureTableDrawStyle.DEFAULT_COLOR}));
-            client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime","更新時間",{textFillStyle:FutureTableDrawStyle.DEFAULT_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale"}));
-            var tableDrawStyle = FutureTableDrawStyle.createNew(client.canvasTable);
+            client.canvasTable.addColumn(CanvasColumn.createNew("code","代號",{textFillStyle:FutureTableStyle.CODE_COLOR}));
+            client.canvasTable.addColumn(CanvasColumn.createNew("name","商品",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid","委買價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("ask","委賣價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{textFillStyle:FutureTableStyle.VOLUME_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume","成交量",{textFillStyle:FutureTableStyle.VOLUME_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDownPercentage","漲跌幅",{decimal:2,percent:true,textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("high","最高價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("low","最低價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("open","開盤價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate","交易日",{orgFormat:"YYYYMMDD",displayFormat:"YYYY-MM-DD",textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
+            client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime","更新時間",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            var tableDrawStyle = FutureTableStyle.createNew(client.canvasTable);
             client.canvasTable.renderHeadRowBackground = tableDrawStyle.headBackground;
             client.canvasTable.renderBodyRowBackground = tableDrawStyle.bodyRowBackground;
             client.canvasTable.setColumnHeadContentRender(tableDrawStyle.headContent);
@@ -121,13 +121,14 @@ var Client = {
                 bg = client.futureGoodsMap[obj.code];//with out mid
                 bg.boardPushData = data;
                 //log(obj);
-                if (client.runChartIndex == bg.index) {
+                if (client.runChartCode == bg.code) {
                     bg.updateTick(obj);
                     client.runChartManager.refresh();
                 }
                 bg.updateBoardObj(obj);
 
-                client.futureDataManager.updateRowData(bg.index, obj);
+                client.futureDataManager.updateRowData( client.futureDataList.indexOf(bg.boardObj), obj);
+                client.canvasTable.render();
             } else if (temp.tp == "s") {
                 if (temp.tr == "5003") {
                     obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
@@ -169,20 +170,19 @@ var Client = {
             client.futureDataList.push(data);
             if (client.futureDataLoaded == client.futureDataTotal) {
                 client.futureDataManager.setDataSource(client.futureDataList);
-                //client.canvasTable.setDataSource(client.futureDataList);
-                client.requestRegisterBoard();
-                client.requestKChart(0);
 
-                //client.canvasTable.render();
+                client.requestRegisterBoard();
+                var bg = client.futureDataList[0];
+                client.requestKChart(bg.code);
+
+                client.canvasTable.setDataSource(client.futureDataList);
+                client.canvasTable.render();
             }
         };
 
         client.onBoardRowClick = function (e, tableClass, rowIndex, rowData) {
-            for (var i = 0; i < client.futureDataList.length; i++) {
-                if (client.futureDataList[i].code == rowData.code) {
-                    client.requestKChart(i);
-                }
-            }
+            log("rowData.code=%s",rowData.code);
+            client.requestKChart(rowData.code);
         };
 
         client.requestFuture = function () {
@@ -197,15 +197,9 @@ var Client = {
             }
         };
 
-        client.requestKChart = function (index) {
-            log("requestKChart:%s", index);
-            var bg;
-            for (var key in client.futureGoodsMap) {
-                bg = client.futureGoodsMap[key];
-                if (bg.index == index) {
-                    break;
-                }
-            }
+        client.requestKChart = function (code) {
+            log("requestKChart:%s", code);
+            var bg = client.futureGoodsMap[code];
 
             bg.kChartTelegram.setRequest(config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1));
             bg.kChartTelegram.sendRequest();
@@ -218,7 +212,7 @@ var Client = {
             //而且不是每秒都有
             //20150527 資料只有1360筆 時間筆數06:00~05:00為1380筆 差了20筆
             config.calculateKChartData(temp.c, bg.boardObj);
-            client.runChartIndex = bg.index;
+            client.runChartCode = bg.code;
             client.runChartManager.show(bg.boardObj);
         };
 
@@ -295,7 +289,7 @@ var runChartManager = {
             var area = chart.area;
 
             var spaceHeight = area.height / 20;
-            var volumeAxisHeight = area.height / 2;
+            var volumeAxisHeight = area.height / 4;
             var valueAxisHeight = area.height - volumeAxisHeight - spaceHeight;
 
             var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);

@@ -1,13 +1,18 @@
 /**
  * Created by user on 2015/6/10.
  */
-var FutureTableDrawStyle = {
+var FutureTableStyle = {
     VOLUME_COLOR: "lightskyblue",
     CODE_COLOR: "#ffb70a",
     DEFAULT_COLOR: "white",
+    upDownColor: function (rowData) {
+        return (rowData.upDown > 0)?"#ad0000":"#00a900";
+    },
     createNew: function (table) {
         var ds = {};
+        var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
         var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
+        baseCtx.font = "16px Helvetica";
         contentCtx.font = "16px Helvetica";
 
         ds.headBackground = function (ctx) {
@@ -39,22 +44,11 @@ var FutureTableDrawStyle = {
 
         ds.cellContent = function (ctx, y, column, rowData, rowIndex) {
             ctx.save();
-            //ctx.fillStyle = "white";
-            ctx.fillStyle = column[CanvasColumn.TEXT_FILL_STYLE];
+            ctx.fillStyle = column.getFillStyle(rowData);
             ctx.textBaseline = "middle";
             ctx.textAlign = "right";
-            //ctx.fillText(column.getValueFunction.call(table,rowData), column.x+column.width-5, y+table.rowMiddle);
             ctx.fillText(column.getValue(rowData), column.x + column.width - 5, y + table.rowMiddle);
-            //ctx.fillText(column.title, column.titleX, table.rowMiddle);
             ctx.restore();
-        };
-
-        ds.cellContentFillStyle = function (rowData) {
-            if (rowData.upDown > 0) {
-                return "#ad0000";
-            } else {
-                return "#00a900";
-            }
         };
 
         return ds;

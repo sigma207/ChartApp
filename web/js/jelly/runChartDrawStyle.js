@@ -120,7 +120,6 @@ var DrawStyle = {
                 //ctx.strokeStyle = "#1f5b97";
                 //ctx.fillStyle = DrawStyle.VOLUME_TEXT_COLOR;
                 ctx.fillStyle = "#5f8cb6";
-                console.log("periodAxis.scale=%s",periodAxis.scale);
                 var borderFixWidth = periodAxis.scale / 3;
                 var contentFixWidth = periodAxis.scale / 5;
                 var startX, endX;

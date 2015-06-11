@@ -44,25 +44,6 @@ var CanvasTable = {
             }
         };
 
-        table.render = function () {
-            table.calculate();
-            table.renderHead();
-            table.renderBody();
-        };
-
-        table.renderBackground = function () {
-            var context = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
-            table.renderHeadRowBackground(context);
-            table.renderBodyRowBackground(context);
-            var count = table.columns.length;
-            var column = undefined;
-            for (var i = 0; i < count; i++) {
-                column = table.columns[i];
-                column.renderHeadBackground(context);
-                column.renderCellBackground(context);
-            }
-        };
-
         table.renderStroke = function () {
             //var context = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
         };
@@ -77,41 +58,61 @@ var CanvasTable = {
         table.renderBodyRowBackground = function (ctx, rowData, rowIndex) {
         };
 
-        table.renderHead = function (ctx) {
-            var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
-            var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
-            table.renderHeadRowBackground(baseCtx);
+        table.render = function () {
+            table.calculate();
+            if (table.columnWidthChanged) {
+                table.layerManager.clearLayer(CanvasTable.BASE_LAYER_INDEX);
+                table.renderBase(table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx);
+            }
+            table.layerManager.clearLayer(CanvasTable.VALUE_LAYER_INDEX);
+            table.renderContent(table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx);
+        };
+
+        table.renderBase = function (ctx) {
+            table.renderHeadRowBackground(ctx);
             var count = table.columns.length;
             var column = undefined;
             for (var i = 0; i < count; i++) {
                 column = table.columns[i];
-                column.renderHeadBackground(baseCtx);
-                column.renderHeadContent(contentCtx, column);
+                column.renderHeadBackground(ctx);
+                column.renderHeadContent(ctx, column);
+            }
+            var rowData = undefined;
+            var y = table.rowHeight;
+            if (table.columnWidthChanged) {
+                for (var rowIndex = 0; rowIndex < table.dataSize; rowIndex++) {
+                    rowData = table.data[rowIndex];
+                    table.renderBodyRowBackground(ctx, y, rowData, rowIndex);
+                    y += table.rowHeight;
+                }
             }
         };
 
-        table.renderBody = function () {
-            var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
-            var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
+        table.renderContent = function (ctx) {
             var column = undefined;
             var count = table.columns.length;
             var y = table.rowHeight;
             var rowData = undefined;
             for (var rowIndex = 0; rowIndex < table.dataSize; rowIndex++) {
                 rowData = table.data[rowIndex];
-                table.renderBodyRowBackground(baseCtx, y, rowData, rowIndex);
                 for (var colIndex = 0; colIndex < count; colIndex++) {
                     column = table.columns[colIndex];
-                    column.renderCellContent(contentCtx, y, column, rowData, rowIndex);
+                    column.renderCellContent(ctx, y, column, rowData, rowIndex);
                 }
                 y += table.rowHeight;
             }
         };
 
         table.calculate = function () {
+            table.calculateColumnWidth();
+            if (table.columnWidthChanged) {
+                table.allocateColumnWidth();
+            }
+        };
+
+        table.calculateColumnWidth = function () {
             var ctx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
             var count = table.columns.length;
-            var canvasWidth = canvas.width;
             var column = undefined;
             var i;
 
@@ -124,19 +125,28 @@ var CanvasTable = {
             for (var rowIndex = 0; rowIndex < table.dataSize; rowIndex++) {
                 for (var colIndex = 0; colIndex < count; colIndex++) {
                     column = table.columns[colIndex];
-                    contentWidth = ctx.measureText(column.getValueFunction.call(table, table.data[rowIndex])).width;
+                    contentWidth = ctx.measureText(column.getValue(table.data[rowIndex])).width;
                     if (contentWidth > column.contentMaxWidth) {
                         column.contentMaxWidth = contentWidth;
                     }
                 }
             }
 
-            var allContentWidth = 0;
+            var oldTableColumnContentWidth = table.columnContentWidth;
+            table.columnContentWidth = 0;
             for (i = 0; i < count; i++) {
-                allContentWidth += table.columns[i].contentMaxWidth;
+                table.columnContentWidth += table.columns[i].contentMaxWidth;
             }
-            //var allColumnWidth = x;
-            var fillTotalWidth = canvasWidth - allContentWidth;
+            table.columnWidthChanged = (table.columnContentWidth != oldTableColumnContentWidth);
+        };
+
+        table.allocateColumnWidth = function () {
+            var count = table.columns.length;
+            var canvasWidth = canvas.width;
+            var column = undefined;
+            var i;
+
+            var fillTotalWidth = canvasWidth - table.columnContentWidth;
             var tempWidth = fillTotalWidth;
             var avgFillWidth = fillTotalWidth / count;
             var x = 0;
@@ -166,18 +176,9 @@ var CanvasColumnType = {
     TIME: "time"
 };
 
-var CanvasTableElement = {
-    createNew: function () {
-        var element = {};
-        element.renderBackground = function (ctx) {
-
-        };
-        return element;
-    }
-};
-
 var CanvasColumn = {
     TEXT_FILL_STYLE: "textFillStyle",
+    TEXT_FILL_STYLE_FUNCTION: "textFillStyleFunction",
     createNew: function (field, title, attribute) {
         var column = {};
         column.field = field;
@@ -195,11 +196,19 @@ var CanvasColumn = {
             } else {
                 column[CanvasColumn.TEXT_FILL_STYLE] = "black";
             }
+            column[CanvasColumn.TEXT_FILL_STYLE_FUNCTION] = attribute[CanvasColumn.TEXT_FILL_STYLE_FUNCTION];
         }
+
+        column.getFillStyle = function (rowData) {
+            if (typeof column[CanvasColumn.TEXT_FILL_STYLE_FUNCTION] !== typeof undefined) {
+                return column[CanvasColumn.TEXT_FILL_STYLE_FUNCTION].call(column, rowData);
+            } else {
+                return column[CanvasColumn.TEXT_FILL_STYLE];
+            }
+        };
         column.getValue = function (rowData) {
             return rowData[column.field];
         };
-        column.getValueFunction = column.getValue;
 
         column.renderHeadBackground = function (ctx) {
         };
@@ -226,28 +235,33 @@ var CanvasColumn = {
 
 var CanvasNumberColumn = {
     DECIMAL: "decimal",
+    PERCENT: "percent",
     createNew: function (field, title, attribute) {
         var column = CanvasColumn.createNew(field, title, attribute);
         column.type = CanvasColumnType.NUMBER;
 
         column.getValue = function (rowData) {
+            var value = (column[CanvasNumberColumn.PERCENT]) ? rowData[column.field] / 100 : rowData[column.field];
             if (column.format == "") {
                 var format = JsonTool.numeralFormat(rowData[column[CanvasNumberColumn.DECIMAL]]);
-                return numeral(rowData[column.field]).format(format);
+                return numeral(value).format(format);
             } else {
-                return numeral(rowData[column.field]).format(column.format);
+                return numeral(value).format(column.format);
             }
         };
 
         if (typeof attribute !== typeof undefined) {
+            column[CanvasNumberColumn.PERCENT] = attribute[CanvasNumberColumn.PERCENT];
             var decimal = attribute[CanvasNumberColumn.DECIMAL];
             if (typeof decimal !== typeof undefined) {
                 column.decimal = decimal;
                 column.format = "";
                 if (JsonTool.isInt(decimal)) {
                     column.format = JsonTool.numeralFormat(decimal);
+                    if (typeof column[CanvasNumberColumn.PERCENT] !== typeof undefined && column[CanvasNumberColumn.PERCENT] == true) {
+                        column.format += "%";
+                    }
                 }
-                column.getValueFunction = column.getValue;
             }
         }
         return column;
@@ -255,9 +269,19 @@ var CanvasNumberColumn = {
 };
 
 var CanvasDateColumn = {
+    ORG_FORMAT: "orgFormat",
+    DISPLAY_FORMAT: "displayFormat",
     createNew: function (field, title, attribute) {
         var column = CanvasColumn.createNew(field, title, attribute);
         column.type = CanvasColumnType.DATE;
+        if (typeof attribute !== typeof undefined) {
+            column[CanvasDateColumn.ORG_FORMAT] = attribute[CanvasDateColumn.ORG_FORMAT];
+            column[CanvasDateColumn.DISPLAY_FORMAT] = attribute[CanvasDateColumn.DISPLAY_FORMAT];
+        }
+
+        column.getValue = function (rowData) {
+            return moment(rowData[column.field], column[CanvasDateColumn.ORG_FORMAT]).format(column[CanvasDateColumn.DISPLAY_FORMAT]);
+        };
         return column;
     }
 };

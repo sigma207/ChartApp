@@ -1,186 +1,11 @@
 /**
  * Created by user on 2015/5/12.
  */
-var ReportDataManager = {
-    createNew: function (usePage) {
-        var rdm = {};
-        rdm.split = 0;
-        rdm.dataSource = [];
-        rdm.dataSize = rdm.dataSource.length;
-        rdm.reportTables = [];
-        rdm.reportDatas = [];
-        rdm.reportSize = 0;
-        rdm.usePage = usePage || false;
-        rdm.pageInit = false;
-        rdm.pageNo = 0;
-        rdm.pageCount = 30;
-
-        rdm.setDataSource = function (dataSource) {
-            rdm.dataSource = dataSource;
-            rdm.dataSize = rdm.dataSource.length;
-            rdm.pageNo = 0;
-            rdm.allocateData();
-            rdm.clearSort();
-            rdm.refresh();
-
-            if (rdm.usePage && !rdm.pageInit) {
-                rdm.addPageController();
-            }
-            if (rdm.usePage) {
-                rdm.renderPageInfo();
-            }
-        };
-
-        rdm.updateRowData = function (index, rowData) {
-            //JsonTool.copy(rdm.dataSource[index],rowData);
-            //rdm.dataSource = rdm.dataSource.splice(index,1,rowData);
-            //rdm.allocateData();
-            rdm.refreshRow(index);
-        };
-
-        rdm.addTable = function (reportTable) {
-            reportTable.setReportDataManager(rdm);
-            rdm.reportTables.push(reportTable);
-            rdm.split++;
-        };
-
-        rdm.getTableRowCount = function () {
-            return rdm.pageCount / rdm.split;
-        };
-
-        rdm.getPageTotal = function () {
-            return Math.ceil(rdm.dataSize / rdm.pageCount);
-        };
-
-        rdm.getRowStartIndex = function () {
-            return (rdm.usePage) ? rdm.getTableRowCount() * rdm.pageNo : 0
-        };
-
-        rdm.sortData = function (sortIndex, field, orderBy, type) {
-            if (type == "number" || type == "rate") {
-                JsonTool.sort(rdm.dataSource, field, orderBy);
-            } else {
-                JsonTool.sortString(rdm.dataSource, field, orderBy);
-            }
-            rdm.allocateData();
-            rdm.updateSortColumn(sortIndex, orderBy);
-            rdm.refresh();
-        };
-
-        rdm.allocateData = function () {
-            logTime("allocateData");
-            var tableRowCount = rdm.getTableRowCount();
-            rdm.reportDatas = [];
-            for (var s = 0; s < rdm.split; s++) {
-                rdm.reportDatas.push([]);
-            }
-            rdm.reportSize = rdm.reportDatas.length;
-            var rowIndex = 1;
-            var reportDataIndex = 0;
-            var currentReportData = rdm.reportDatas[reportDataIndex];
-            for (var i = 0; i < rdm.dataSize; i++) {
-                currentReportData.push(rdm.dataSource[i]);
-                if (rowIndex >= tableRowCount) {
-                    if (reportDataIndex == rdm.reportSize - 1) {
-                        reportDataIndex = 0;
-                    } else {
-                        reportDataIndex++;
-                    }
-                    currentReportData = rdm.reportDatas[reportDataIndex];
-                    rowIndex = 1;
-                } else {
-                    rowIndex++;
-                }
-            }
-            logTimeEnd("allocateData");
-        };
-
-        rdm.updateSortColumn = function (sortIndex, orderBy) {
-            for (var i = 0; i < rdm.reportTables.length; i++) {
-                rdm.reportTables[i].updateSortColumn(sortIndex, orderBy);
-            }
-        };
-
-        rdm.clearSort = function () {
-            for (var i = 0; i < rdm.reportTables.length; i++) {
-                rdm.reportTables[i].clearSortColumn();
-            }
-        };
-
-        rdm.refresh = function () {
-            for (var i = 0; i < rdm.reportTables.length; i++) {
-                rdm.reportTables[i].setDataSource(rdm.reportDatas[i]);
-            }
-        };
-
-        rdm.refreshRow = function (index) {
-            for (var i = 0; i < rdm.reportTables.length; i++) {
-                rdm.reportTables[i].renderRowDom(index);
-            }
-        };
-
-        rdm.addPageController = function () {
-            var pageButton = "<div class='reportPageButton' style='float: right;'>" +
-                "<button id='fpagebtn' class='btn btn-default'>第一頁</button>" +
-                "<button id='pageupbtn' class='btn btn-default'>上一頁</button>" +
-                "<button id='pagedownbtn' class='btn btn-default'>下一頁</button>" +
-                "<button id='lpagebtn' class='btn btn-default'>最末頁</button>" + "</div>";
-            var pageInfo = "<div class='reportPageInfo' style='float: left;'>" +
-                "當前第[<label id='pageIdxCount'>0/0</label>]頁" + "</div>";
-            var pageDiv = "<div class='reportPage'>" + pageInfo + pageButton + "</div>";
-            $(".reportTableContainer").after(pageDiv);
-            rdm.initPageButtonEvent();
-            rdm.pageInit = true;
-        };
-
-        rdm.initPageButtonEvent = function () {
-            $("#pagedownbtn").click(function () {
-                if (rdm.pageNo < rdm.getPageTotal() - 1) {
-                    rdm.pageNo++;
-                    rdm.renderTableDom();
-                } else {
-                    alert("抱歉!最後一頁囉");
-                }
-            });
-            $("#pageupbtn").click(function () {
-                if (rdm.pageNo > 0) {
-                    rdm.pageNo--;
-                    rdm.renderTableDom();
-                } else {
-                    alert("抱歉!第一頁囉");
-                }
-            });
-            $("#fpagebtn").click(function () {
-                rdm.pageNo = 0;
-                rdm.renderTableDom();
-            });
-            $("#lpagebtn").click(function () {
-                rdm.pageNo = rdm.getPageTotal() - 1;
-                rdm.renderTableDom();
-            });
-        };
-
-        rdm.renderTableDom = function () {
-            for (var i = 0; i < rdm.reportTables.length; i++) {
-                rdm.reportTables[i].renderDom();
-            }
-            if (rdm.usePage) {
-                rdm.renderPageInfo();
-            }
-        };
-
-        rdm.renderPageInfo = function () {
-            $("#pageIdxCount").text((rdm.pageNo + 1) + "/" + rdm.getPageTotal());
-        };
-
-        return rdm;
-    }
-};
 
 var ReportTable = {
     TD_CLASS_RENDERER: "tdClassRenderer",
     createNew: function (tableClass) {
-        var dt = {};//dragTable
+        var dt = DataSourceRenderer.createNew();//dragTable
         dt.tableClass = tableClass;
         dt.$table = $("." + dt.tableClass);
         dt.$headTr = dt.$table.find("thead>tr");
@@ -197,8 +22,8 @@ var ReportTable = {
         //dt.dragImgElement;
         dt.dragIndex = -1;
         dt.dropIndex = -1;
-        dt.data = [];
-        dt.dataSize = 0;
+        //dt.data = [];
+        //dt.dataSize = 0;
         dt.columnSize = 0;
         dt.columnFields = [];
         dt.renderTBody = "";
@@ -221,10 +46,10 @@ var ReportTable = {
         dt.DATA_TIME_FORMATE = "HHmmss";
         dt.DISPLAY_TIME_FORMATE = "HH:mm:ss";
 
-        dt.rdm = null;
-        dt.setReportDataManager = function (rdm) {
-            dt.rdm = rdm;
-        };
+        //dt.dsr = null;
+        //dt.setReportDataManager = function (rdm) {
+        //    dt.dsr = rdm;
+        //};
 
         dt.checkHeadBody = function () {
             if (dt.$table.find("thead").length == 0) {
@@ -331,11 +156,11 @@ var ReportTable = {
             });
         };
 
-        dt.setDataSource = function (newData) {
-            dt.data = newData;
-            dt.dataSize = dt.data.length;
-            dt.renderDom();
-        };
+        //dt.setDataSource = function (newData) {
+        //    dt.data = newData;
+        //    dt.dataSize = dt.data.length;
+        //    dt.renderDom();
+        //};
 
         dt.setReportColumns = function (columns, types) {
             dt.$headTr.empty();
@@ -412,7 +237,7 @@ var ReportTable = {
             if (changeOrderBy) {
                 currentOrderBy = (currentOrderBy == dt.ASC) ? dt.DESC : dt.ASC;
             }
-            dt.rdm.sortData(sortIndex, $th.attr(dt.FIELD), currentOrderBy, $th.attr(dt.COLUMN_TYPE));
+            dt.dsr.sortData(sortIndex, $th.attr(dt.FIELD), currentOrderBy, $th.attr(dt.COLUMN_TYPE));
         };
 
         dt.clearSortColumn = function () {
@@ -450,21 +275,21 @@ var ReportTable = {
             dt.tdClassRenderers[funcName] = func;
         };
 
-        dt.renderDom = function () {
+        dt.render = function () {
             //console.time("renderDom");
             dt.refreshThObjList();//refresh thObjList
             dt.renderTBody = "";
             var count = 0;
-            var tableRowCount = dt.rdm.getTableRowCount();
-            for (var rowIndex = dt.rdm.getRowStartIndex(); rowIndex < dt.dataSize; rowIndex++) {
+            var tableRowCount = dt.dsr.getTableRowCount();
+            for (var rowIndex = dt.dsr.getRowStartIndex(); rowIndex < dt.dataSize; rowIndex++) {
                 dt.renderTBody += dt.generateTr(rowIndex);
-                if (dt.rdm.usePage)count++;
+                if (dt.dsr.usePage)count++;
                 if (count >= tableRowCount) {
                     break;
                 }
             }
             //fill empty tr for page
-            if (dt.rdm.usePage && count < tableRowCount) {
+            if (dt.dsr.usePage && count < tableRowCount) {
                 while (count < tableRowCount) {
                     dt.renderTBody += dt.generateTr(rowIndex++);
                     count++;
@@ -480,7 +305,7 @@ var ReportTable = {
             //console.timeEnd("renderDom");
         };
 
-        dt.renderRowDom = function (index) {
+        dt.renderRow = function (index) {
             var tr = dt.generateTr(index);
             dt.trList.eq(index).replaceWith(tr);
             dt.trList = dt.$table.find("tbody").children();

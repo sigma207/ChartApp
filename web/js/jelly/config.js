@@ -22,6 +22,10 @@ var config = {
     },
     unZip: function (temp, callbackFun) {
         var objContentBase64EncodedCompressedBytesInStr = temp['c'].replace('\r\n', '');
+        //DOM Exception 5 INVALID CHARACTER error on valid base64 image string in javascript
+        //http://stackoverflow.com/questions/14695988/dom-exception-5-invalid-character-error-on-valid-base64-image-string-in-javascri
+        //ie 要加下面這行才不會出錯 by sigma
+        objContentBase64EncodedCompressedBytesInStr = objContentBase64EncodedCompressedBytesInStr.replace(/\s/g, '');
         var objContentCompressedBytesInStr = atob(objContentBase64EncodedCompressedBytesInStr);
         var decompressedBytes = pako.ungzip(objContentCompressedBytesInStr); // Ungzip it.
 
@@ -135,22 +139,6 @@ var config = {
         new Future("TXCC", "台指期", 1.06, "084500", "134500"),
         new Future("YMCC", "道瓊期", 0.25, "060000", "050000")
     ],
-    boardGoods: {
-        "6ECC": "歐元期",
-        "CLCC": "輕油期",
-        "GCCC": "黃金期",
-        "HSICC": "桓生期",
-        "IFCC": "滬深期",
-        "NKCC": "日經期",
-        "NQCC": "那斯達",
-        "SICC": "白銀期",
-        "TECC": "電子期",
-        "TFCC": "金融期",
-        "TWCC": "摩台期",
-        "TWICC": "加權指",
-        "TXCC": "台指期",
-        "YMCC": "道瓊期"
-    },
     futureColumnList: [
         new FutureColumn(",", "bid6", "委買價6", FutureColumn.prototype.FLOAT_TYPE),
         new FutureColumn("-", "bid7", "委買價7", FutureColumn.prototype.FLOAT_TYPE),

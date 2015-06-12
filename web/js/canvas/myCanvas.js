@@ -67,3 +67,89 @@ var LayerManager = {
         return cm;
     }
 };
+
+var CanvasMouse = {
+    createNew: function (canvas) {
+        var mouse = {};
+        mouse.x = undefined;
+        mouse.y = undefined;
+        mouse.lastX = undefined;
+        mouse.lastY = undefined;
+        mouse.onOverCall = undefined;
+        mouse.onMoveCall = undefined;
+        mouse.onDownCall = undefined;
+        mouse.onOutCall = undefined;
+        mouse.onUpCall = undefined;
+        mouse.onWheelCall = undefined;
+        mouse.registerMouseEvent = function () {
+            var $canvas = $(canvas);
+            $canvas.mouseover(mouse.onMouseOver);
+            $canvas.mousemove(mouse.onMouseMove);
+            $canvas.mousedown(mouse.onMouseDown);
+            $canvas.mouseout(mouse.onMouseOut);
+            $canvas.mouseup(mouse.onMouseUp);
+            $canvas.mousewheel(mouse.onMouseWheel);
+        };
+
+        mouse.windowToCanvas = function (x, y) {
+            var bbox = canvas.getBoundingClientRect();
+            return {
+                x: x - bbox.left,
+                y: y - bbox.top
+            };
+        };
+
+        mouse.onMouseOver = function (e) {
+            e.preventDefault();
+            if (typeof mouse.onOverCall !== typeof undefined) {
+                mouse.onOverCall.call(mouse);
+            }
+        };
+
+        mouse.onMouseMove = function (e) {
+            e.preventDefault();
+            var temp = mouse.windowToCanvas(e.clientX, e.clientY);
+            mouse.x = temp.x;
+            mouse.y = temp.y;
+            if (typeof mouse.onMoveCall !== typeof undefined) {
+                mouse.onMoveCall.call(mouse);
+            }
+            mouse.lastX = mouse.x;
+            mouse.lastY = mouse.y;
+        };
+
+        mouse.onMouseDown = function (e) {
+            e.preventDefault();
+            if (typeof mouse.onDownCall !== typeof undefined) {
+                mouse.onDownCall.call(mouse);
+            }
+        };
+
+        mouse.onMouseOut = function (e) {
+            if (typeof mouse.onOutCall !== typeof undefined) {
+                mouse.onOutCall.call(mouse);
+            }
+        };
+
+        mouse.onMouseUp = function (e) {
+            if (typeof mouse.onUpCall !== typeof undefined) {
+                mouse.onUpCall.call(mouse);
+            }
+        };
+
+        mouse.onMouseWheel = function (e, delta) {
+            e.preventDefault();
+            if (delta > 1) {//有可能大於1或小於-1,要強迫修正
+                delta = 1;
+            } else if (delta < -1) {
+                delta = -1;
+            }
+            if (typeof mouse.onWheelCall !== typeof undefined) {
+                mouse.onWheelCall.call(mouse, delta);
+            }
+        };
+
+        mouse.registerMouseEvent();
+        return mouse;
+    }
+};

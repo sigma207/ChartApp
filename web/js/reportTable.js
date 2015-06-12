@@ -280,7 +280,7 @@ var ReportTable = {
             dt.refreshThObjList();//refresh thObjList
             dt.renderTBody = "";
             var count = 0;
-            var tableRowCount = dt.dsr.getTableRowCount();
+            var tableRowCount = dt.dsr.getRenderRowCount();
             for (var rowIndex = dt.dsr.getRowStartIndex(); rowIndex < dt.dataSize; rowIndex++) {
                 dt.renderTBody += dt.generateTr(rowIndex);
                 if (dt.dsr.usePage)count++;

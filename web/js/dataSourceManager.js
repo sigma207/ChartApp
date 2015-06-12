@@ -1,15 +1,29 @@
 /**
  * Created by user on 2015/6/11.
  */
+var Sort = {
+    ORDER_BY: "orderBy",
+    DESC: "desc",
+    ASC: "asc"
+};
+
+var ColumnType = {
+    TEXT: "text",
+    NUMBER: "number",
+    RATE: "rate",
+    DATE: "date",
+    TIME: "time"
+};
+
 var DataSourceManager = {
     createNew: function (usePage) {
         var dsr = {};
         dsr.split = 0;
         dsr.dataSource = [];
         dsr.dataSize = dsr.dataSource.length;
-        dsr.reportTables = [];
-        dsr.reportDatas = [];
-        dsr.reportSize = 0;
+        dsr.renderers = [];
+        dsr.renderDataGroup = [];
+        dsr.renderDataGroupSize = 0;
         dsr.usePage = usePage || false;
         dsr.pageInit = false;
         dsr.pageNo = 0;
@@ -35,13 +49,13 @@ var DataSourceManager = {
             dsr.refreshRow(index);
         };
 
-        dsr.addTable = function (reportTable) {
-            reportTable.setDataSourceRenderer(dsr);
-            dsr.reportTables.push(reportTable);
+        dsr.addRenderer = function (renderer) {
+            renderer.setDataSourceRenderer(dsr);
+            dsr.renderers.push(renderer);
             dsr.split++;
         };
 
-        dsr.getTableRowCount = function () {
+        dsr.getRenderRowCount = function () {
             return dsr.pageCount / dsr.split;
         };
 
@@ -50,7 +64,7 @@ var DataSourceManager = {
         };
 
         dsr.getRowStartIndex = function () {
-            return (dsr.usePage) ? dsr.getTableRowCount() * dsr.pageNo : 0
+            return (dsr.usePage) ? dsr.getRenderRowCount() * dsr.pageNo : 0
         };
 
         dsr.sortData = function (sortIndex, field, orderBy, type) {
@@ -66,24 +80,24 @@ var DataSourceManager = {
 
         dsr.allocateData = function () {
             logTime("allocateData");
-            var tableRowCount = dsr.getTableRowCount();
-            dsr.reportDatas = [];
+            var renderRowCount = dsr.getRenderRowCount();
+            dsr.renderDataGroup = [];
             for (var s = 0; s < dsr.split; s++) {
-                dsr.reportDatas.push([]);
+                dsr.renderDataGroup.push([]);
             }
-            dsr.reportSize = dsr.reportDatas.length;
+            dsr.renderDataGroupSize = dsr.renderDataGroup.length;
             var rowIndex = 1;
             var reportDataIndex = 0;
-            var currentReportData = dsr.reportDatas[reportDataIndex];
+            var currentReportData = dsr.renderDataGroup[reportDataIndex];
             for (var i = 0; i < dsr.dataSize; i++) {
                 currentReportData.push(dsr.dataSource[i]);
-                if (rowIndex >= tableRowCount) {
-                    if (reportDataIndex == dsr.reportSize - 1) {
+                if (rowIndex >= renderRowCount) {
+                    if (reportDataIndex == dsr.renderDataGroupSize - 1) {
                         reportDataIndex = 0;
                     } else {
                         reportDataIndex++;
                     }
-                    currentReportData = dsr.reportDatas[reportDataIndex];
+                    currentReportData = dsr.renderDataGroup[reportDataIndex];
                     rowIndex = 1;
                 } else {
                     rowIndex++;
@@ -93,26 +107,26 @@ var DataSourceManager = {
         };
 
         dsr.updateSortColumn = function (sortIndex, orderBy) {
-            for (var i = 0; i < dsr.reportTables.length; i++) {
-                dsr.reportTables[i].updateSortColumn(sortIndex, orderBy);
+            for (var i = 0; i < dsr.renderers.length; i++) {
+                dsr.renderers[i].updateSortColumn(sortIndex, orderBy);
             }
         };
 
         dsr.clearSort = function () {
-            for (var i = 0; i < dsr.reportTables.length; i++) {
-                dsr.reportTables[i].clearSortColumn();
+            for (var i = 0; i < dsr.renderers.length; i++) {
+                dsr.renderers[i].clearSortColumn();
             }
         };
 
         dsr.refresh = function () {
-            for (var i = 0; i < dsr.reportTables.length; i++) {
-                dsr.reportTables[i].setDataSource(dsr.reportDatas[i]);
+            for (var i = 0; i < dsr.renderers.length; i++) {
+                dsr.renderers[i].setDataSource(dsr.renderDataGroup[i]);
             }
         };
 
         dsr.refreshRow = function (index) {
-            for (var i = 0; i < dsr.reportTables.length; i++) {
-                dsr.reportTables[i].renderRow(index);
+            for (var i = 0; i < dsr.renderers.length; i++) {
+                dsr.renderers[i].renderRow(index);
             }
         };
 
@@ -134,7 +148,7 @@ var DataSourceManager = {
             $("#pagedownbtn").click(function () {
                 if (dsr.pageNo < dsr.getPageTotal() - 1) {
                     dsr.pageNo++;
-                    dsr.renderTableDom();
+                    dsr.renderAll();
                 } else {
                     alert("抱歉!最後一頁囉");
                 }
@@ -142,24 +156,24 @@ var DataSourceManager = {
             $("#pageupbtn").click(function () {
                 if (dsr.pageNo > 0) {
                     dsr.pageNo--;
-                    dsr.renderTableDom();
+                    dsr.renderAll();
                 } else {
                     alert("抱歉!第一頁囉");
                 }
             });
             $("#fpagebtn").click(function () {
                 dsr.pageNo = 0;
-                dsr.renderTableDom();
+                dsr.renderAll();
             });
             $("#lpagebtn").click(function () {
                 dsr.pageNo = dsr.getPageTotal() - 1;
-                dsr.renderTableDom();
+                dsr.renderAll();
             });
         };
 
-        dsr.renderTableDom = function () {
-            for (var i = 0; i < dsr.reportTables.length; i++) {
-                dsr.reportTables[i].render();
+        dsr.renderAll = function () {
+            for (var i = 0; i < dsr.renderers.length; i++) {
+                dsr.renderers[i].render();
             }
             if (dsr.usePage) {
                 dsr.renderPageInfo();
@@ -191,13 +205,17 @@ var DataSourceRenderer = {
             renderer.dsr = dsr;
         };
 
-        renderer.render = function () {};
+        renderer.render = function () {
+        };
 
-        renderer.renderRow = function (rowIndex) {};
+        renderer.renderRow = function (rowIndex) {
+        };
 
-        renderer.updateSortColumn = function () {};
+        renderer.updateSortColumn = function () {
+        };
 
-        renderer.clearSortColumn = function () {};
+        renderer.clearSortColumn = function () {
+        };
 
         return renderer;
     }

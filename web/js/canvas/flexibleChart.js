@@ -62,92 +62,11 @@ var CanvasComponent = {
 };
 
 var ChartMouse = {
-    createNew: function (chart, mouseLayer) {
-        var mouse = CanvasComponent.createNew();
-        mouse.layer = mouseLayer;
-        mouse.x = undefined;
-        mouse.y = undefined;
-        mouse.lastX = undefined;
-        mouse.lastY = undefined;
-        mouse.inChartArea = false;
-        mouse.dragging = false;
-        mouse.onMoveOver = undefined;
-        mouse.onMoveCall = undefined;
-        mouse.onDownCall = undefined;
-        mouse.onOutCall = undefined;
-        mouse.onUpCall = undefined;
-        mouse.onWheelCall = undefined;
-        mouse.registerMouseEvent = function () {
-            var canvas = $(mouse.layer.canvas);
-            canvas.mouseover(mouse.onMouseOver);
-            canvas.mousemove(mouse.onMouseMove);
-            canvas.mousedown(mouse.onMouseDown);
-            canvas.mouseout(mouse.onMouseOut);
-            canvas.mouseup(mouse.onMouseUp);
-            canvas.mousewheel(mouse.onMouseWheel);
-        };
-
-        mouse.windowToCanvas = function (x, y) {
-            var bbox = mouse.layer.canvas.getBoundingClientRect();
-            return {
-                x: x - bbox.left,
-                y: y - bbox.top
-            };
-        };
-
-        mouse.onMouseOver = function (e) {
-            e.preventDefault();
-            mouse.inChartArea = true;
-            if (typeof mouse.onMoveOver !== typeof undefined) {
-                mouse.onMoveOver.call(mouse);
-            }
-        };
-
-        mouse.onMouseMove = function (e) {
-            e.preventDefault();
-            var temp = mouse.windowToCanvas(e.clientX, e.clientY);
-            mouse.x = temp.x;
-            mouse.y = temp.y;
-            if (typeof mouse.onMoveCall !== typeof undefined) {
-                mouse.onMoveCall.call(mouse);
-            }
-            mouse.lastX = mouse.x;
-            mouse.lastY = mouse.y;
-        };
-
-        mouse.onMouseDown = function (e) {
-            e.preventDefault();
-            if (typeof mouse.onDownCall !== typeof undefined) {
-                mouse.onDownCall.call(mouse);
-            }
-        };
-
-        mouse.onMouseOut = function (e) {
-            mouse.inChartArea = false;
-            if (typeof mouse.onOutCall !== typeof undefined) {
-                mouse.onOutCall.call(mouse);
-            }
-        };
-
-        mouse.onMouseUp = function (e) {
-            if (typeof mouse.onUpCall !== typeof undefined) {
-                mouse.onUpCall.call(mouse);
-            }
-        };
-
-        mouse.onMouseWheel = function (e, delta) {
-            e.preventDefault();
-            if (delta > 1) {//有可能大於1或小於-1,要強迫修正
-                delta = 1;
-            } else if (delta < -1) {
-                delta = -1;
-            }
-            if (typeof mouse.onWheelCall !== typeof undefined) {
-                mouse.onWheelCall.call(mouse, delta);
-            }
-        };
-        mouse.registerMouseEvent();
-        return mouse;
+    createNew: function (mouseLayer) {
+        var chartMouse = CanvasComponent.createNew();
+        log(mouseLayer);
+        chartMouse.mouse = CanvasMouse.createNew(mouseLayer.canvas);
+        return chartMouse;
     }
 };
 
@@ -520,39 +439,48 @@ var RunChart = {
         };
 
         chart.createMouse = function (mouseLayer) {
-            chart.mouse = ChartMouse.createNew(chart, mouseLayer);
-            chart.mouse.onMoveCall = chart.mouseMove;
-            chart.mouse.onDownCall = chart.mouseDown;
-            chart.mouse.onOutCall = chart.mouseOut;
-            chart.mouse.onUpCall = chart.mouseUp;
-            chart.mouse.onWheelCall = chart.mouseWheel;
-            return chart.mouse;
+            chart.chartMouse = ChartMouse.createNew( mouseLayer);
+            chart.chartMouse.mouse.onOverCall = chart.mouseOver;
+            chart.chartMouse.mouse.onMoveCall = chart.mouseMove;
+            chart.chartMouse.mouse.onDownCall = chart.mouseDown;
+            chart.chartMouse.mouse.onOutCall = chart.mouseOut;
+            chart.chartMouse.mouse.onUpCall = chart.mouseUp;
+            chart.chartMouse.mouse.onWheelCall = chart.mouseWheel;
+            chart.chartMouse.index = -1;
+            chart.chartMouse.inChartArea = false;
+            chart.chartMouse.dragging = false;
+            return chart.chartMouse;
+        };
+
+        chart.mouseOver = function () {
+            chart.chartMouse.inChartArea = true;
         };
 
         chart.mouseMove = function () {
-            if(!chart.mouse.inChartArea)return;
+            if(!chart.chartMouse.inChartArea)return;
             var periodAxis = chart.periodAxis;
-            chart.mouse.index = periodAxis.convertIndex(chart.mouse.x);
-            chart.mouse.inAxisArea = (chart.mouse.x >= chart.area.x + periodAxis.scale && chart.mouse.x <= chart.area.right - periodAxis.scale) &&
-            (chart.mouse.y <= chart.area.y && chart.mouse.y >= chart.area.top);
+            chart.chartMouse.index = periodAxis.convertIndex(chart.chartMouse.mouse.x);
+            chart.chartMouse.inAxisArea = (chart.chartMouse.mouse.x >= chart.area.x + periodAxis.scale && chart.chartMouse.mouse.x <= chart.area.right - periodAxis.scale) &&
+            (chart.chartMouse.mouse.y <= chart.area.y && chart.chartMouse.mouse.y >= chart.area.top);
             chart.layerManager.clearLayer(2);
-            chart.mouse.drawChartLayer(chart, 2);
+            chart.chartMouse.drawChartLayer(chart, 2);
         };
 
         chart.mouseDown = function () {
-            if (chart.mouse.inAxisArea) {
-                chart.mouse.dragging = true;
+            if (chart.chartMouse.inAxisArea) {
+                chart.chartMouse.dragging = true;
             }
         };
 
         chart.mouseOut = function () {
+            chart.chartMouse.inChartArea = false;
             chart.layerManager.clearLayer(2);
-            chart.mouse.dragging = false;
+            chart.chartMouse.dragging = false;
         };
 
         chart.mouseUp = function () {
-            chart.mouse.dragging = false;
-            if (chart.mouse.inAxisArea) {
+            chart.chartMouse.dragging = false;
+            if (chart.chartMouse.inAxisArea) {
                 chart.mouseMove();
             }
         };

@@ -33,36 +33,36 @@
 </head>
 <body>
 <button id="stop">stop</button>
-<div class="reportTableContainer" style="width: 100%;">
-    <table width="100%" class="futureTable oddEven">
-        <thead>
-        <tr>
-            <th field="code" tdClass="golden">代號</th>
-            <th field="name">商品</th>
-            <th field="bid" type="number" decimal="scale" tdClassRenderer="upDown">委買價</th>
-            <th field="ask" type="number" decimal="scale" tdClassRenderer="upDown">委賣價</th>
-            <th field="last" type="number" decimal="scale" tdClassRenderer="upDown">成交價</th>
-            <th field="volume" type="number" tdClass="lightBlue">單量</th>
-            <th field="totalVolume" type="number" tdClass="lightBlue">成交量</th>
-            <th field="upDown" type="number" decimal="scale" tdClassRenderer="upDown">漲跌</th>
-            <th field="upDownPercentage" type="rate" decimal="2" tdClassRenderer="upDown">漲跌幅</th>
-            <th field="high" type="number" decimal="scale" tdClassRenderer="upDown">最高價</th>
-            <th field="low" type="number" decimal="scale" tdClassRenderer="upDown">最低價</th>
-            <th field="open" type="number" decimal="scale" tdClassRenderer="upDown">開盤價</th>
-            <th field="tradeDate" type="date">交易日</th>
-            <th field="tickTime" type="time">更新時間</th>
-            <th field="preClose" type="number" decimal="scale" tdClassRenderer="upDown">昨結價</th>
-        </tr>
-        </thead>
-    </table>
-</div>
+<!--<div class="reportTableContainer" style="width: 100%;">-->
+    <!--<table width="100%" class="futureTable oddEven">-->
+        <!--<thead>-->
+        <!--<tr>-->
+            <!--<th field="code" tdClass="golden">代號</th>-->
+            <!--<th field="name">商品</th>-->
+            <!--<th field="bid" type="number" decimal="scale" tdClassRenderer="upDown">委買價</th>-->
+            <!--<th field="ask" type="number" decimal="scale" tdClassRenderer="upDown">委賣價</th>-->
+            <!--<th field="last" type="number" decimal="scale" tdClassRenderer="upDown">成交價</th>-->
+            <!--<th field="volume" type="number" tdClass="lightBlue">單量</th>-->
+            <!--<th field="totalVolume" type="number" tdClass="lightBlue">成交量</th>-->
+            <!--<th field="upDown" type="number" decimal="scale" tdClassRenderer="upDown">漲跌</th>-->
+            <!--<th field="upDownPercentage" type="rate" decimal="2" tdClassRenderer="upDown">漲跌幅</th>-->
+            <!--<th field="high" type="number" decimal="scale" tdClassRenderer="upDown">最高價</th>-->
+            <!--<th field="low" type="number" decimal="scale" tdClassRenderer="upDown">最低價</th>-->
+            <!--<th field="open" type="number" decimal="scale" tdClassRenderer="upDown">開盤價</th>-->
+            <!--<th field="tradeDate" type="date">交易日</th>-->
+            <!--<th field="tickTime" type="time">更新時間</th>-->
+            <!--<th field="preClose" type="number" decimal="scale" tdClassRenderer="upDown">昨結價</th>-->
+        <!--</tr>-->
+        <!--</thead>-->
+    <!--</table>-->
+<!--</div>-->
 
 <div>
 
-    <div class="futureTableContainer" style="width: 100%;height: 400px;">
-        <canvas id="tableCanvas" width="1500" height="400"></canvas>
+    <div class="futureTableContainer" style="width: 100%;height: 300px;">
+        <canvas id="tableCanvas" width="1500" height="300"></canvas>
     </div>
-    <div style="width: 100%;height: 600px;">
+    <div style="width: 100%;height: 400px;">
         <canvas id="runChartCanvas" width="1500" height="400"></canvas>
     </div>
 </div>

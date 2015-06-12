@@ -43,10 +43,10 @@ var Client = {
 
             client.runChartManager = runChartManager.createNew();
 
-            client.futureTable = ReportTable.createNew("futureTable");
-            client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
+            //client.futureTable = ReportTable.createNew("futureTable");
+            //client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
             client.futureDataManager = DataSourceManager.createNew(false);
-            client.futureDataManager.addTable(client.futureTable);
+            //client.futureDataManager.addRenderer(client.futureTable);
 
             client.initCanvasTable();
 
@@ -57,7 +57,9 @@ var Client = {
         };
 
         client.initCanvasTable = function () {
+
             client.canvasTable = CanvasTable.createNew(document.getElementById("tableCanvas"));
+
             client.canvasTable.addColumn(CanvasColumn.createNew("code","代號",{textFillStyle:FutureTableStyle.CODE_COLOR}));
             client.canvasTable.addColumn(CanvasColumn.createNew("name","商品",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid","委買價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
@@ -73,6 +75,9 @@ var Client = {
             client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate","交易日",{orgFormat:"YYYYMMDD",displayFormat:"YYYY-MM-DD",textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime","更新時間",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+
+            client.futureDataManager.addRenderer(client.canvasTable);
+
             var tableDrawStyle = FutureTableStyle.createNew(client.canvasTable);
             client.canvasTable.renderHeadRowBackground = tableDrawStyle.headBackground;
             client.canvasTable.renderBodyRowBackground = tableDrawStyle.bodyRowBackground;
@@ -127,7 +132,7 @@ var Client = {
                 }
                 bg.updateBoardObj(obj);
 
-                client.futureDataManager.updateRowData( client.futureDataList.indexOf(bg.boardObj), obj);
+                //client.futureDataManager.updateRowData( client.futureDataList.indexOf(bg.boardObj), obj);
                 client.canvasTable.render();
             } else if (temp.tp == "s") {
                 if (temp.tr == "5003") {
@@ -175,8 +180,8 @@ var Client = {
                 var bg = client.futureDataList[0];
                 client.requestKChart(bg.code);
 
-                client.canvasTable.setDataSource(client.futureDataList);
-                client.canvasTable.render();
+                //client.canvasTable.setDataSource(client.futureDataList);
+                //client.canvasTable.render();
             }
         };
 

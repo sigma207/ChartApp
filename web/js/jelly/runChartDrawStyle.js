@@ -29,10 +29,10 @@ var DrawStyle = {
 
         ds.drawMouseLayerMove = function (ctx) {
             //mouseCtx
-            var mouse = runChart.mouse;
+            var chartMouse = runChart.chartMouse;
             var periodAxis = runChart.periodAxis;
-            if (mouse.inAxisArea) {
-                if (mouse.dragging) {
+            if (chartMouse.inAxisArea) {
+                if (chartMouse.dragging) {
                     //var newStartIndex = -1;
                     //if (mouse.x > mouse.lastX && periodAxis.endIndex < runChart.dataDriven.count - 1) {
                     //    newStartIndex = periodAxis.startIndex + 1;
@@ -62,8 +62,8 @@ var DrawStyle = {
             function mouseGuideWires() {
                 ctx.save();
                 ctx.strokeStyle = "gray";
-                ctx.drawHorizontalLine(chartArea.x, runChart.mouse.y, chartArea.right);
-                ctx.drawVerticalLine(runChart.mouse.x, chartArea.top, chartArea.y);
+                ctx.drawHorizontalLine(chartArea.x, runChart.chartMouse.mouse.y, chartArea.right);
+                ctx.drawVerticalLine(runChart.chartMouse.mouse.x, chartArea.top, chartArea.y);
                 ctx.restore();
             }
         };

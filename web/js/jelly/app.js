@@ -15,6 +15,7 @@ var Client = {
         client.futureDataLoaded = 0;
         client.futureDataList = [];
         client.runChartCode = "";
+        client.testPushData = false;
 
         client.init = function () {
             var i;
@@ -122,6 +123,7 @@ var Client = {
             var temp = JSON.parse(data);
             var obj, bg, code;
             if (temp.tp == "p") {//push
+                log("push data onFutureData");
                 obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
                 bg = client.futureGoodsMap[obj.code];//with out mid
                 bg.boardPushData = data;
@@ -131,9 +133,9 @@ var Client = {
                     client.runChartManager.refresh();
                 }
                 bg.updateBoardObj(obj);
-
+                //log(client.futureDataList.indexOf(bg.boardObj));
                 //client.futureDataManager.updateRowData( client.futureDataList.indexOf(bg.boardObj), obj);
-                client.canvasTable.render();
+                client.canvasTable.renderRow(client.futureDataList.indexOf(bg.boardObj));
             } else if (temp.tp == "s") {
                 if (temp.tr == "5003") {
                     obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
@@ -176,16 +178,13 @@ var Client = {
             if (client.futureDataLoaded == client.futureDataTotal) {
                 client.futureDataManager.setDataSource(client.futureDataList);
 
-                client.requestRegisterBoard();
+                if(client.testPushData)client.requestRegisterBoard();
                 var bg = client.futureDataList[0];
                 client.requestKChart(bg.code);
-
-                //client.canvasTable.setDataSource(client.futureDataList);
-                //client.canvasTable.render();
             }
         };
 
-        client.onBoardRowClick = function (e, tableClass, rowIndex, rowData) {
+        client.onBoardRowClick = function (e, rowData) {
             log("rowData.code=%s",rowData.code);
             client.requestKChart(rowData.code);
         };
@@ -207,6 +206,7 @@ var Client = {
             var bg = client.futureGoodsMap[code];
 
             bg.kChartTelegram.setRequest(config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1));
+            log("kChartTelegram sendRequest");
             bg.kChartTelegram.sendRequest();
         };
 

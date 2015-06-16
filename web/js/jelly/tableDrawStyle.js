@@ -11,8 +11,10 @@ var FutureTableStyle = {
     createNew: function (table) {
         var ds = {};
         var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
+        var headerCtx = table.layerManager.getLayer(CanvasTable.HEADER_LAYER_INDEX).ctx;
         var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
         baseCtx.font = "16px Helvetica";
+        headerCtx.font = "16px Helvetica";
         contentCtx.font = "16px Helvetica";
 
         ds.headBackground = function (ctx) {

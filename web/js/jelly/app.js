@@ -15,7 +15,7 @@ var Client = {
         client.futureDataLoaded = 0;
         client.futureDataList = [];
         client.runChartCode = "";
-        client.testPushData = false;
+        client.testPushData = true;
 
         client.init = function () {
             var i;
@@ -103,6 +103,7 @@ var Client = {
                 bg.futureUnRegisterTelegram.sendRequest();
                 //client.quoteWsm.send(bg.futureUnRegisterTelegram.requestText);
             }
+            //client.canvasTable.stop();
             client.quoteWsm.close();
             client.kChartWsm.close();
         };
@@ -206,7 +207,6 @@ var Client = {
             var bg = client.futureGoodsMap[code];
 
             bg.kChartTelegram.setRequest(config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1));
-            log("kChartTelegram sendRequest");
             bg.kChartTelegram.sendRequest();
         };
 

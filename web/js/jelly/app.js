@@ -15,7 +15,8 @@ var Client = {
         client.futureDataLoaded = 0;
         client.futureDataList = [];
         client.runChartCode = "";
-        client.testPushData = true;
+        //client.testPushData = true;
+        client.testPushData = false;
 
         client.init = function () {
             var i;

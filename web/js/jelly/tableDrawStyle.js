@@ -6,7 +6,7 @@ var FutureTableStyle = {
     CODE_COLOR: "#ffb70a",
     DEFAULT_COLOR: "white",
     upDownColor: function (rowData) {
-        return (rowData.upDown > 0)?"#ad0000":"#00a900";
+        return (rowData.upDown > 0) ? "#ad0000" : "#00a900";
     },
     createNew: function (table) {
         var ds = {};
@@ -36,20 +36,20 @@ var FutureTableStyle = {
             ctx.restore();
         };
 
-        ds.headContent = function (ctx, column) {
+        ds.headContent = function (ctx, x, column) {
             ctx.save();
             ctx.fillStyle = "white";
             ctx.textBaseline = "middle";
-            ctx.fillText(column.title, column.titleX, table.rowMiddle);
+            ctx.fillText(column.title, x, table.rowMiddle);
             ctx.restore();
         };
 
-        ds.cellContent = function (ctx, y, column, rowData, rowIndex) {
+        ds.cellContent = function (ctx, x, y, column, rowData, rowIndex) {
             ctx.save();
             ctx.fillStyle = column.getFillStyle(rowData);
             ctx.textBaseline = "middle";
             ctx.textAlign = "right";
-            ctx.fillText(column.getValue(rowData), column.x + column.width - 5, y + table.rowMiddle);
+            ctx.fillText(column.getValue(rowData), x, y);
             ctx.restore();
         };
 

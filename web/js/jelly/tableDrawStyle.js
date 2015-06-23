@@ -13,26 +13,48 @@ var FutureTableStyle = {
         var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
         var headerCtx = table.layerManager.getLayer(CanvasTable.HEADER_LAYER_INDEX).ctx;
         var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
-        baseCtx.font = "16px Helvetica";
-        headerCtx.font = "16px Helvetica";
-        contentCtx.font = "16px Helvetica";
 
-        ds.headBackground = function (ctx) {
-            var lg = ctx.createLinearGradient(0, 0, 0, table.rowHeight);
+        var valueFloatCtx = table.layerManager.getLayer(CanvasTable.VALUE_FLOAT_LAYER_INDEX).ctx;
+        var valueStationaryCtx = table.layerManager.getLayer(CanvasTable.VALUE_STATIONARY_LAYER_INDEX).ctx;
+        var headerFloatCtx = table.layerManager.getLayer(CanvasTable.HEADER_FLOAT_LAYER_INDEX).ctx;
+        var headerStationary = table.layerManager.getLayer(CanvasTable.HEADER_STATIONARY_LAYER_INDEX).ctx;
+        baseCtx.font = "16px Helvetica";
+        if (typeof headerCtx !== typeof undefined) {
+            headerCtx.font = "16px Helvetica";
+        }
+        if (typeof contentCtx !== typeof undefined) {
+            contentCtx.font = "16px Helvetica";
+        }
+
+        if (typeof valueFloatCtx !== typeof undefined) {
+            valueFloatCtx.font = "16px Helvetica";
+        }
+        if (typeof valueStationaryCtx !== typeof undefined) {
+            valueStationaryCtx.font = "16px Helvetica";
+        }
+        if (typeof headerFloatCtx !== typeof undefined) {
+            headerFloatCtx.font = "16px Helvetica";
+        }
+        if (typeof headerStationary !== typeof undefined) {
+            headerStationary.font = "16px Helvetica";
+        }
+
+        ds.headBackground = function (ctx, x, y, width, height) {
+            var lg = ctx.createLinearGradient(0, 0, 0, height);
             lg.addColorStop(0, '#5c5f66');
             lg.addColorStop(1, '#000000');
             ctx.fillStyle = lg;
-            ctx.fillRect(0, 0, ctx.canvas.width, table.rowHeight);
+            ctx.fillRect(x, y, width, height);
         };
 
-        ds.bodyRowBackground = function (ctx, y, rowData, rowIndex) {
+        ds.bodyRowBackground = function (ctx, x, y, width, height, rowData, rowIndex) {
             ctx.save();
             if (rowIndex % 2 == 0) {
                 ctx.fillStyle = "#272727";
             } else {
                 ctx.fillStyle = "#0f0f0f";
             }
-            ctx.fillRect(0, y, ctx.canvas.width, table.rowHeight);
+            ctx.fillRect(x, y, width, height);
             ctx.restore();
         };
 

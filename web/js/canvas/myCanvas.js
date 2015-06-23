@@ -28,7 +28,8 @@ var LayerManager = {
             $(cm.baseLayer.canvas).attr("height", parent.css("height"));
             cm.layerList.push(cm.baseLayer);
         };
-        cm.addLayer = function (id) {
+        cm.addLayer = function (id, opacity) {
+            log("addLayer id=%s",id);
             var canvas = document.createElement('canvas');
             var layer = CanvasLayer.createNew(id, canvas);
             var layerCanvas = $(layer.canvas);
@@ -38,7 +39,7 @@ var LayerManager = {
             layerCanvas.attr("width", baseLayer.attr("width"));
             layerCanvas.attr("height", baseLayer.attr("height"));
             layerCanvas.css("position", "absolute");
-            layerCanvas.css("opacity", "1");
+            layerCanvas.css("opacity", opacity || "1");
 
             cm.layerList.push(layer);
             return layer;

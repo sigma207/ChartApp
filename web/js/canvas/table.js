@@ -6,14 +6,21 @@ var CanvasTable = {
     VALUE_LAYER_INDEX: 1,
     HEADER_LAYER_INDEX: 2,
     MOUSE_LAYER_INDEX: 3,
+    VALUE_FLOAT_LAYER_INDEX: 1,
+    VALUE_STATIONARY_LAYER_INDEX: 2,
+    HEADER_FLOAT_LAYER_INDEX: 3,
+    HEADER_STATIONARY_LAYER_INDEX: 4,
+    STATIONARY_MOUSE_LAYER_INDEX: 5,
     createNew: function (canvas) {
         var table = DataSourceRenderer.createNew();
         //var ctx = canvas.getContext("2d");
         table.canvas = canvas;
+        table.initLayer = false;
         table.animationId = undefined;
         table.reRenderHeader = true;
         table.reRenderContent = true;
         table.reRenderVerticalScroll = true;
+        table.reRenderStationaryHeader = true;
         table.columns = [];
         table.columnSize = 0;
         table.columnsWidth = 0;
@@ -21,25 +28,46 @@ var CanvasTable = {
         table.rowMiddle = table.rowHeight / 2;
         table.layerManager = LayerManager.createNew();
         table.layerManager.addBaseLayer(canvas);
-        table.layerManager.addLayer("tableValueLayer");
-        table.layerManager.addLayer("tableHeaderLayer");
-        table.layerManager.addLayer("tableMouseLayer");
-        table.mouse = CanvasTableMouse.createNew(table);
         table.renderRowIndex = -1;
         table.renderRowMap = {};
         table.renderRowList = [];
+        table.useVerticalScroll = false;
+        table.useHorizontalScroll = false;
         table.contentHeight = 0;
         table.rowStartIndex = 0;
         table.verticalScrollWidth = 15;
         table.verticalScrollHeight = 0;
         table.verticalScrollX = 0;
         table.verticalScrollY = 0;
-        table.columnCanUseWidth = 0;
+        table.canUseContentHeight = 0;
+        table.canUseColumnsWidth = 0;
         table.horizontalLockCount = 0;
         table.horizontalScrollWidth = 0;
         table.horizontalScrollHeight = 15;
         table.horizontalScrollX = 0;
         table.horizontalScrollY = 0;
+        table.lockColumnCount = 0;
+        table.lockColumnsWidth = 0;
+
+        table.addLayer = function () {
+            if (table.lockColumnCount == 0) {
+                table.layerManager.addLayer("tableValueLayer");
+                table.layerManager.addLayer("tableHeaderLayer");
+                table.layerManager.addLayer("tableMouseLayer");
+                table.mouse = CanvasTableMouse.createNew(table, table.layerManager.getLayer(CanvasTable.MOUSE_LAYER_INDEX));
+            } else {
+                table.layerManager.addLayer("tableFloatValueLayer");
+                table.layerManager.addLayer("tableStationaryValueLayer");
+                table.layerManager.addLayer("tableFloatHeaderLayer");
+                table.layerManager.addLayer("tableStationaryHeaderLayer");
+                table.layerManager.addLayer("tableMouseLayer");
+                table.mouse = CanvasTableMouse.createNew(table, table.layerManager.getLayer(CanvasTable.STATIONARY_MOUSE_LAYER_INDEX));
+            }
+        };
+
+        table.updateLockColumnCount = function (lockColumnCount) {
+            table.lockColumnCount = lockColumnCount;
+        };
 
         table.addColumn = function (column) {
             column.index = table.columns.length;
@@ -57,6 +85,7 @@ var CanvasTable = {
             table.reRenderHeader = true;
             table.reRenderContent = true;
             table.reRenderVerticalScroll = true;
+            table.reRenderStationaryHeader = true;
             table.calculate();
             if (typeof table.animationId !== typeof undefined) {
                 table.stop();
@@ -107,9 +136,9 @@ var CanvasTable = {
 
         table.renderRow = function (rowIndex) {
             //must recalculate row column width change
-            if (table.calculateRowColumnWidth(rowIndex)) {
-                table.reRenderHeader = true;
-            }
+            //if (table.calculateRowColumnWidth(rowIndex)) {
+            //    table.reRenderHeader = true;
+            //}
 
             if (rowIndex >= table.rowStartIndex && rowIndex <= table.rowEndIndex) {
                 table.renderRowMap[rowIndex] = table.rowStartY + (rowIndex - table.rowStartIndex) * table.rowHeight;
@@ -133,55 +162,97 @@ var CanvasTable = {
                 table.renderRowMap = {};
             }
 
-            if (table.reRenderVerticalScroll || table.reRenderHorizontalScroll) {
-                table.layerManager.clearLayer(CanvasTable.MOUSE_LAYER_INDEX);
-                //if (table.reRenderVerticalScroll) {
-                table.renderVerticalScroll(table.layerManager.getLayer(CanvasTable.MOUSE_LAYER_INDEX).ctx);
-                table.reRenderVerticalScroll = false;
-                //}
+            if ((table.lockColumnsWidth > 0)) {
+                if (table.reRenderStationaryHeader) {
+                    table.renderStationaryHeader();
+                    table.reRenderStationaryHeader = false;
+                }
+                if (table.reRenderVerticalScroll) {
+                    table.renderStationaryContent();
+                }
+            }
 
-                //if (table.reRenderHorizontalScroll) {
-                table.renderHorizontalScroll(table.layerManager.getLayer(CanvasTable.MOUSE_LAYER_INDEX).ctx);
+            if (table.reRenderVerticalScroll || table.reRenderHorizontalScroll) {
+                var scrollIndex = (table.lockColumnCount > 0) ? CanvasTable.STATIONARY_MOUSE_LAYER_INDEX : CanvasTable.MOUSE_LAYER_INDEX;
+                var scrollCtx = table.layerManager.getLayer(scrollIndex).ctx;
+                table.layerManager.clearLayer(scrollIndex);
+
+                table.renderVerticalScroll(scrollCtx);
+                table.reRenderVerticalScroll = false;
+                table.renderHorizontalScroll(scrollCtx);
                 table.reRenderHorizontalScroll = false;
-                //}
             }
 
             table.animationId = requestAnimationFrame(table.render);
 
         };
 
-        table.renderHeader = function () {
-            table.layerManager.clearLayer(CanvasTable.HEADER_LAYER_INDEX);
-            var ctx = table.layerManager.getLayer(CanvasTable.HEADER_LAYER_INDEX).ctx;
-            table.renderHeadRowBackground(ctx);
+        table.renderStationaryHeader = function () {
+            table.layerManager.clearLayer(CanvasTable.HEADER_STATIONARY_LAYER_INDEX);
+            var ctx = table.layerManager.getLayer(CanvasTable.HEADER_STATIONARY_LAYER_INDEX).ctx;
+            table.renderHeadRowBackground(ctx, 0, 0, table.lockColumnsWidth, table.rowHeight);
             var column = undefined;
+            for (var colIndex = 0; colIndex < table.lockColumnCount; colIndex++) {
+                column = table.columns[colIndex];
+                column.renderHeadBackground(ctx);
+                column.renderHeadContent(ctx, column.titleX, column);
+            }
+        };
+
+        table.renderHeader = function () {
+            var layerIndex = (table.lockColumnsWidth > 0) ? CanvasTable.HEADER_FLOAT_LAYER_INDEX : CanvasTable.HEADER_LAYER_INDEX;
+
+            table.layerManager.clearLayer(layerIndex);
+            var ctx = table.layerManager.getLayer(layerIndex).ctx;
+            table.renderHeadRowBackground(ctx, table.lockColumnsWidth, 0, ctx.canvas.width - table.lockColumnsWidth, table.rowHeight);
+            var column = undefined;
+
             for (var colIndex = table.colStartIndex; colIndex <= table.colEndIndex; colIndex++) {
                 column = table.columns[colIndex];
                 column.renderHeadBackground(ctx);
-                column.renderHeadContent(ctx, column.titleX - table.horizontalMoveX, column);
+                column.renderHeadContent(ctx, table.lockColumnsWidth + column.titleX - table.horizontalMoveX, column);
                 //log("index=%s,title=%s", colIndex, column.title);
                 //log("column.titleX=%s,table.horizontalMoveX=%s",column.titleX,table.horizontalMoveX);
             }
         };
 
+        table.renderStationaryContent = function () {
+            table.layerManager.clearLayer(CanvasTable.VALUE_STATIONARY_LAYER_INDEX);
+            var ctx = table.layerManager.getLayer(CanvasTable.VALUE_STATIONARY_LAYER_INDEX).ctx;
+
+            var column = undefined;
+            var colIndex, rowIndex, rowData = undefined;
+            var y = table.rowStartY;
+            for (rowIndex = table.rowStartIndex; rowIndex <= table.rowEndIndex; rowIndex++) {
+                rowData = table.data[rowIndex];
+                table.renderBodyRowBackground(ctx, 0, y, table.lockColumnsWidth, table.rowHeight, rowData, rowIndex);
+                for (colIndex = 0; colIndex < table.lockColumnCount; colIndex++) {
+                    column = table.columns[colIndex];
+                    column.renderCellContent(ctx, column.x + column.width, y + table.rowMiddle, column, rowData, rowIndex);
+                }
+                y += table.rowHeight;
+            }
+        };
+
         table.renderContent = function () {
             var backgroundCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
-            var ctx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
+            var valueLayerIndex = (table.lockColumnsWidth > 0) ? CanvasTable.VALUE_FLOAT_LAYER_INDEX : CanvasTable.VALUE_LAYER_INDEX;
+            var ctx = table.layerManager.getLayer(valueLayerIndex).ctx;
             var column = undefined;
-            var colIndex, rowIndex;
+            var colIndex, rowIndex, rowData = undefined;
             var y = table.rowStartY;
-            var rowData = undefined;
 
             if (table.reRenderHeader || table.reRenderVerticalScroll || JsonTool.length(table.renderRowMap) == 0) {
                 table.layerManager.clearLayer(CanvasTable.BASE_LAYER_INDEX);
-                table.layerManager.clearLayer(CanvasTable.VALUE_LAYER_INDEX);
+                table.layerManager.clearLayer(valueLayerIndex);
                 for (rowIndex = table.rowStartIndex; rowIndex <= table.rowEndIndex; rowIndex++) {
                     rowData = table.data[rowIndex];
-                    table.renderBodyRowBackground(backgroundCtx, y, rowData, rowIndex);
+                    //table.renderBodyRowBackground(backgroundCtx, y, rowData, rowIndex);
+                    table.renderBodyRowBackground(backgroundCtx, table.lockColumnsWidth, y, backgroundCtx.canvas.width-table.lockColumnsWidth, table.rowHeight, rowData, rowIndex);
 
                     for (colIndex = table.colStartIndex; colIndex <= table.colEndIndex; colIndex++) {
                         column = table.columns[colIndex];
-                        column.renderCellContent(ctx, column.x + column.width - table.horizontalMoveX, y + table.rowMiddle, column, rowData, rowIndex);
+                        column.renderCellContent(ctx, table.lockColumnsWidth + column.x + column.width - table.horizontalMoveX, y + table.rowMiddle, column, rowData, rowIndex);
                     }
                     y += table.rowHeight;
                 }
@@ -192,10 +263,11 @@ var CanvasTable = {
                     y = table.renderRowMap[rowIndex];
                     backgroundCtx.clearRect(0, y, ctx.canvas.width, table.rowHeight);
                     ctx.clearRect(0, y, ctx.canvas.width, table.rowHeight);
-                    table.renderBodyRowBackground(backgroundCtx, y, rowData, rowIndex);
+                    table.renderBodyRowBackground(backgroundCtx, table.lockColumnsWidth, y, backgroundCtx.canvas.width-table.lockColumnsWidth, table.rowHeight, rowData, rowIndex);
+                    //table.renderBodyRowBackground(backgroundCtx, y, rowData, rowIndex);
                     for (colIndex = table.colStartIndex; colIndex <= table.colEndIndex; colIndex++) {
                         column = table.columns[colIndex];
-                        column.renderCellContent(ctx, column.x + column.width - table.horizontalMoveX, y + table.rowMiddle, column, rowData, rowIndex);
+                        column.renderCellContent(ctx, table.lockColumnsWidth + column.x + column.width - table.horizontalMoveX, y + table.rowMiddle, column, rowData, rowIndex);
                     }
                 }
             }
@@ -216,55 +288,97 @@ var CanvasTable = {
         };
 
         table.calculate = function () {
-            table.calculateColumn();
+            //table.calculateColumn();
+            table.calculateColumnsWidth();
+            table.calculateBase();
+            if (!table.useHorizontalScroll) {
+                table.fillColumnsWidth();
+            }
             table.calculateHorizontalScrollSize();
             table.calculateVerticalScrollSize();
-        };
-
-        table.calculateColumn = function () {
-            table.calculateColumnsWidth();
-            table.allocateColumnsWidth();
         };
 
         table.calculateBase = function () {
             table.contentHeight = 0;
             for (var rowIndex = 0; rowIndex < table.dataSize; rowIndex++) {
                 table.contentHeight += table.rowHeight;
-                //log("rowIndex=%s",rowIndex);
             }
-            //scroll Height
-            //table.canUseContentHeight = canvas.height - table.rowHeight;
-            table.canUseContentHeight = canvas.height - table.rowHeight - ((table.horizontalScrollWidth > 0) ? table.horizontalScrollHeight : 0);
-            table.columnCanUseWidth = canvas.width - table.verticalScrollWidth;
+            table.canUseContentHeight = canvas.height - table.rowHeight;
+            table.overHeight = table.contentHeight - table.canUseContentHeight;
+            if (table.overHeight > 0) {
+                table.useVerticalScroll = true;
+            }
+            table.canUseColumnsWidth = canvas.width - ((table.useVerticalScroll) ? table.verticalScrollWidth : 0);
+            table.overWidth = table.columnsWidth - table.canUseColumnsWidth;
+            if (table.overWidth > 0) {
+                table.useHorizontalScroll = true;
+            }
+            if (table.useHorizontalScroll) {
+                table.canUseContentHeight -= table.horizontalScrollHeight;
+                table.overHeight = table.contentHeight - table.canUseContentHeight;
+            }
+            log("table.canUseColumnsWidth=%s", table.canUseColumnsWidth);
+            //table.canUseContentHeight = canvas.height - table.rowHeight - ((table.horizontalScrollWidth > 0) ? table.horizontalScrollHeight : 0);
+        };
 
+        table.fillColumnsWidth = function () {
+            var i, x = 0, column = undefined;
+            var fillTotalWidth = table.columnsWidth - table.orgColumnsWidth;
+            if (fillTotalWidth > 0) {
+                log("fillTotalWidth=%s", fillTotalWidth);
+                table.columnsWidth = 0;
+                var tempWidth = fillTotalWidth;
+                var avgFillWidth = tempWidth / table.columnSize;
+
+                for (i = 0; i < table.columnSize; i++) {
+                    column = table.columns[i];
+                    column.x = x;
+                    if (avgFillWidth > tempWidth) {
+                        column.width += tempWidth;
+                    } else {
+                        column.width += avgFillWidth;
+                        tempWidth = tempWidth - avgFillWidth;
+                    }
+                    column.titleX = column.x + (column.width / 2) - (column.titleWidth / 2);
+                    x += column.width;
+                    table.columnsWidth += column.width;
+                }
+                return true;
+            }
+            return false;
         };
 
         table.calculateHorizontalScrollSize = function () {
-            var overWidth = table.columnsWidth - table.columnCanUseWidth;
-            log("table.columnsWidth=%s", table.columnsWidth);
-            log("table.columnCanUseWidth=%s", table.columnCanUseWidth);
-            log("overWidth=%s", overWidth);
-            if (overWidth > 0) {
+            if (table.useHorizontalScroll) {
                 table.horizontalScrollX = 0;
                 table.horizontalScrollY = canvas.height - table.horizontalScrollHeight;
 
-                table.horizontalScrollWidth = table.columnCanUseWidth * (table.columnCanUseWidth / table.columnsWidth);
-                table.horizontalScrollMoveRange = table.columnCanUseWidth - table.horizontalScrollWidth;
-                table.horizontalScrollMoveStep = overWidth / table.horizontalScrollMoveRange;
-
-                log("table.horizontalScrollWidth=%s", table.horizontalScrollWidth);
-                log("table.horizontalScrollMoveRange=%s", table.horizontalScrollMoveRange);
-                log("table.horizontalScrollMoveStep=%s", table.horizontalScrollMoveStep);
+                table.horizontalScrollWidth = table.canUseColumnsWidth * (table.canUseColumnsWidth / table.columnsWidth);
+                table.horizontalScrollMoveRange = table.canUseColumnsWidth - table.horizontalScrollWidth;
+                table.horizontalScrollMoveStep = table.overWidth / table.horizontalScrollMoveRange;
             } else {
                 table.horizontalScrollWidth = 0;
             }
+            log("table.horizontalScrollWidth=%s", table.horizontalScrollWidth);
             table.calculateHorizontalScroll();
         };
 
+        table.calculateVerticalScrollSize = function () {
+            if (table.useVerticalScroll) {
+                table.verticalScrollX = canvas.width - table.verticalScrollWidth;
+                table.verticalScrollHeight = table.canUseContentHeight * (table.canUseContentHeight / table.contentHeight);
+                table.verticalScrollMoveRange = table.canUseContentHeight - table.verticalScrollHeight;
+                table.verticalScrollMoveStep = table.overHeight / table.verticalScrollMoveRange;
+            } else {
+                table.verticalScrollHeight = 0;
+            }
+            table.calculateVerticalScroll();
+        };
+
         table.calculateHorizontalScroll = function () {
-            if (table.horizontalScrollWidth > 0) {
+            if (table.useHorizontalScroll) {
                 //var moveX = table.horizontalScrollX * table.horizontalScrollMoveStep;
-                table.horizontalMoveX = table.horizontalScrollX * table.horizontalScrollMoveStep;
+                table.horizontalMoveX = table.lockColumnsWidth + table.horizontalScrollX * table.horizontalScrollMoveStep;
                 table.colStartX = Math.round(table.horizontalMoveX);
                 var column = undefined;
                 var colIndex;
@@ -284,13 +398,13 @@ var CanvasTable = {
                         }
                     }
                     if (hasFindStartCol) {
-                        if(table.horizontalMoveX + table.columnCanUseWidth < column.x){
-                            table.colEndIndex = colIndex-1;
+                        if (table.horizontalMoveX + table.canUseColumnsWidth < column.x) {
+                            table.colEndIndex = colIndex - 1;
                             break;
                         }
                     }
                 }
-                if(table.colEndIndex==-1){
+                if (table.colEndIndex == -1) {
                     table.colEndIndex = table.columnSize - 1;
                 }
 
@@ -298,49 +412,22 @@ var CanvasTable = {
                 table.reRenderHorizontalScroll = true;
                 table.reRenderContent = true;
             } else {
+                table.horizontalMoveX = 0;
                 table.colStartX = 0;
                 table.colStartIndex = 0;
-
                 table.colEndIndex = table.columnSize - 1;
             }
-            //log("table.horizontalScrollX=%s", table.horizontalScrollX);
-            //log("table.horizontalMoveX=%s", table.horizontalMoveX);
-            //log("table.horizontalMoveX+table.columnCanUseWidth=%s", table.horizontalMoveX + table.columnCanUseWidth);
-            //log("table.colStartX=%s,table.colStartIndex=%s,table.colEndIndex=%s", table.colStartX, table.colStartIndex, table.colEndIndex);
-        };
-
-        table.calculateVerticalScrollSize = function () {
-            table.contentHeight = 0;
-            for (var rowIndex = 0; rowIndex < table.dataSize; rowIndex++) {
-                table.contentHeight += table.rowHeight;
-                //log("rowIndex=%s",rowIndex);
-            }
-            //scroll Height
-            //table.canUseContentHeight = canvas.height - table.rowHeight;
-            table.canUseContentHeight = canvas.height - table.rowHeight - ((table.horizontalScrollWidth > 0) ? table.horizontalScrollHeight : 0);
-            var overHeight = table.contentHeight - table.canUseContentHeight;
-            if (overHeight > 0) {
-                table.verticalScrollX = table.columnCanUseWidth;
-                //table.verticalScrollHeight = table.canUseContentHeight - overHeight;
-                table.verticalScrollHeight = table.canUseContentHeight * (table.canUseContentHeight / table.contentHeight);
-                table.verticalScrollMoveRange = table.canUseContentHeight - table.verticalScrollHeight;
-                table.verticalScrollMoveStep = overHeight / table.verticalScrollMoveRange;
-                log("table.canUseContentHeight=%s", table.canUseContentHeight);
-                log("overHeight=%s", overHeight);
-                log("table.verticalScrollHeight=%s", table.verticalScrollHeight);
-                log("table.verticalScrollMoveRange=%s", table.verticalScrollMoveRange);
-                log("table.verticalScrollMoveStep=%s", table.verticalScrollMoveStep);
-            } else {
-                table.verticalScrollHeight = 0;
-            }
-            table.calculateVerticalScroll();
+            log("table.horizontalMoveX=%s", table.horizontalMoveX);
+            log("table.colStartIndex=%s", table.colStartIndex);
+            log("table.colEndIndex=%s", table.colEndIndex);
         };
 
         table.calculateVerticalScroll = function () {
             if (table.verticalScrollHeight > 0) {
-                var moveY = table.verticalScrollY * table.verticalScrollMoveStep;
-                table.rowStartY = Math.round(table.rowHeight - (moveY % table.rowHeight));//y要4捨5入，不然會因為小數點計算時而有空白產生
-                table.rowStartIndex = Math.floor(moveY / table.rowHeight);
+
+                table.verticalMoveY = table.verticalScrollY * table.verticalScrollMoveStep;
+                table.rowStartY = Math.round(table.rowHeight - (table.verticalMoveY % table.rowHeight));//y要4捨5入，不然會因為小數點計算時而有空白產生
+                table.rowStartIndex = Math.floor(table.verticalMoveY / table.rowHeight);
 
                 var count = Math.ceil((table.canUseContentHeight + (table.rowHeight - table.rowStartY)) / table.rowHeight);
                 table.rowEndIndex = table.rowStartIndex + count - 1;
@@ -350,6 +437,7 @@ var CanvasTable = {
                 log("table.verticalScrollY=%s,rowStartY=%s,count=%s", table.verticalScrollY, table.rowStartY, count);
                 //console.log("rowStartY=%s,moveY=%s,rowStartIndex=%s", table.rowStartY, moveY, table.rowStartIndex);
             } else {
+                table.verticalMoveY = 0;
                 table.rowStartY = table.rowHeight;
                 table.rowStartIndex = 0;
                 table.rowEndIndex = table.dataSize - 1;
@@ -375,7 +463,10 @@ var CanvasTable = {
             //logTime("table.calculateColumnWidth()");
             var ctx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
             var column = undefined;
-            var colIndex, rowIndex, contentWidth;
+            var colIndex, rowIndex, contentWidth, x = 0;
+            table.columnsWidth = 0;
+            table.orgColumnsWidth = 0;
+            table.lockColumnsWidth = 0;
 
             for (colIndex = 0; colIndex < table.columnSize; colIndex++) {
                 column = table.columns[colIndex];
@@ -386,57 +477,20 @@ var CanvasTable = {
                     contentWidth = ctx.measureText(column.getValue(table.data[rowIndex])).width;
                     column.calculateMaxWidth(contentWidth, rowIndex);
                 }
-            }
 
+                column.x = x;
+                column.width = column.paddingLeft + column.contentMaxWidth + column.paddingRight;
+                column.titleX = column.x + (column.width / 2) - (column.titleWidth / 2);
+                x += column.width;
+                table.orgColumnsWidth += column.contentMaxWidth;
+                table.columnsWidth += column.width;
+                if (colIndex < table.lockColumnCount) {//if lockColumnCount bigger than zero,
+                    table.lockColumnsWidth += column.width;
+                }
+                log("column.x=%s,column.width=%s", column.x, column.width);
+            }
+            log("table.columnsWidth=%s", table.columnsWidth);
             //logTimeEnd("table.calculateColumnWidth()");
-        };
-
-        table.allocateColumnsWidth = function () {
-            table.columnsWidth = 0;
-            var column = undefined;
-            var i;
-            var x = 0;
-
-            var orgAllColumnWidth = 0;
-            for (i = 0; i < table.columnSize; i++) {
-                orgAllColumnWidth += table.columns[i].contentMaxWidth;
-            }
-
-            log("table.columnCanUseWidth=%s", table.columnCanUseWidth);
-            log("orgAllColumnWidth=%s", orgAllColumnWidth);
-            var fillTotalWidth = table.columnCanUseWidth - orgAllColumnWidth;
-            if (fillTotalWidth <= 0) {
-                for (i = 0; i < table.columnSize; i++) {
-                    column = table.columns[i];
-                    column.x = x;
-                    column.width = column.paddingLeft+column.contentMaxWidth+column.paddingRight;
-                    column.titleX = column.x + (column.width / 2) - (column.titleWidth / 2);
-                    x += column.width;
-                    table.columnsWidth += column.width;
-                    //log("column.x=%s,column.end=%s",column.x,column.x+column.width);
-                }
-            } else {
-                var tempWidth = fillTotalWidth;
-                var avgFillWidth = fillTotalWidth / table.columnSize;
-
-                for (i = 0; i < table.columnSize; i++) {
-                    column = table.columns[i];
-                    column.x = x;
-                    if (avgFillWidth > tempWidth) {
-                        column.width = column.contentMaxWidth + tempWidth;
-                    } else {
-                        column.width = column.contentMaxWidth + avgFillWidth;
-                        tempWidth = tempWidth - avgFillWidth;
-                    }
-
-                    column.titleX = column.x + (column.width / 2) - (column.titleWidth / 2);
-                    x += column.width;
-                    //log("column.width=%s", column.width);
-                    //log("table.columnsWidth=%s", table.columnsWidth);
-                    table.columnsWidth += column.width;
-                }
-            }
-
         };
 
         table.mouseWheel = function (delta) {
@@ -498,9 +552,9 @@ var CanvasTable = {
 };
 
 var CanvasTableMouse = {
-    createNew: function (table) {
+    createNew: function (table, layer) {
         var tableMouse = {};
-        tableMouse.layer = table.layerManager.getLayer(CanvasTable.MOUSE_LAYER_INDEX);
+        tableMouse.layer = layer;
         tableMouse.mouse = CanvasMouse.createNew(tableMouse.layer.canvas);
         tableMouse.verticalScrollerDragging = false;
         tableMouse.horizontalScrollerDragging = false;
@@ -521,9 +575,9 @@ var CanvasTableMouse = {
                 }
             } else if (tableMouse.horizontalScrollerDragging) {
                 if (tableMouse.mouse.x > tableMouse.mouse.lastX) {
-                    table.addHorizontalScrollX(tableMouse.mouse.x-tableMouse.mouse.lastX);
+                    table.addHorizontalScrollX(tableMouse.mouse.x - tableMouse.mouse.lastX);
                 } else if (tableMouse.mouse.x < tableMouse.mouse.lastX) {
-                    table.addHorizontalScrollX(tableMouse.mouse.x-tableMouse.mouse.lastX);
+                    table.addHorizontalScrollX(tableMouse.mouse.x - tableMouse.mouse.lastX);
                 }
             } else {
                 tableMouse.onVerticalScroller = false;
@@ -533,7 +587,7 @@ var CanvasTableMouse = {
                 tableMouse.leftHorizontalScroller = false;//right side
                 tableMouse.rightHorizontalScroller = false;//left side
                 tableMouse.mouseInHead = !(tableMouse.mouse.y > table.rowHeight);
-                if (tableMouse.mouse.x > table.columnCanUseWidth) {
+                if (tableMouse.mouse.x > table.canUseColumnsWidth) {
                     tableMouse.mouseColumnIndex = -1;
                     tableMouse.inColumnArea = false;
 

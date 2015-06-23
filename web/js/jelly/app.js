@@ -77,7 +77,8 @@ var Client = {
             client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate","交易日",{orgFormat:"YYYYMMDD",displayFormat:"YYYY-MM-DD",textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime","更新時間",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
             client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-
+            client.canvasTable.updateLockColumnCount(2);
+            client.canvasTable.addLayer();
             client.futureDataManager.addRenderer(client.canvasTable);
 
             var tableDrawStyle = FutureTableStyle.createNew(client.canvasTable);

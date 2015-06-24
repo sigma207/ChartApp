@@ -29,7 +29,6 @@ var LayerManager = {
             cm.layerList.push(cm.baseLayer);
         };
         cm.addLayer = function (id, opacity) {
-            log("addLayer id=%s",id);
             var canvas = document.createElement('canvas');
             var layer = CanvasLayer.createNew(id, canvas);
             var layerCanvas = $(layer.canvas);

@@ -8,8 +8,10 @@ var Client = {
         client.quoteWsm = WebSocketManager.createNew(config.quoteWsUrl, "board");
         client.kChartWsm = WebSocketManager.createNew(config.kChartWsUrl, "kChart");
         client.columnMap = {};
+        client.quoteDetailsTable = undefined;
         client.canvasTable = undefined;
         client.futureDataManager = undefined;
+        client.quoteDetailDataManager = undefined;
         client.futureTable = undefined;
         client.futureDataTotal = 0;
         client.futureDataLoaded = 0;
@@ -48,14 +50,31 @@ var Client = {
             //client.futureTable = ReportTable.createNew("futureTable");
             //client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
             client.futureDataManager = DataSourceManager.createNew(false);
+            client.quoteDetailDataManager = DataSourceManager.createNew(false);
             //client.futureDataManager.addRenderer(client.futureTable);
 
             client.initCanvasTable();
+            client.initQuoteDetailsTable();
 
             $(document).on("rowClick", client.onBoardRowClick);
             $(window).on("beforeunload", function () {
                 client.stop();
             });
+        };
+
+        client.initQuoteDetailsTable = function () {
+            client.quoteDetailsTable = CanvasTable.createNew(document.getElementById("quoteDetailsCanvas"));
+            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time","時間",{textFillStyle:FutureTableStyle.CODE_COLOR}));
+            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("volume","單量",{textFillStyle:FutureTableStyle.CODE_COLOR}));
+            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("close","成交價",{textFillStyle:FutureTableStyle.CODE_COLOR}));
+            client.quoteDetailsTable.addLayer();
+            client.quoteDetailDataManager.addRenderer(client.quoteDetailsTable);
+
+            var quoteDetailStyle = QuoteDetailStyle.createNew(client.quoteDetailsTable);
+            client.quoteDetailsTable.renderHeadRowBackground = quoteDetailStyle.headBackground;
+            client.quoteDetailsTable.renderBodyRowBackground = quoteDetailStyle.bodyRowBackground;
+            client.quoteDetailsTable.setColumnHeadContentRender(quoteDetailStyle.headContent);
+            client.quoteDetailsTable.setColumnCellContentRender(quoteDetailStyle.cellContent);
         };
 
         client.initCanvasTable = function () {
@@ -145,6 +164,7 @@ var Client = {
                     bg = client.getFutureGoodsByMid(temp.mid);
                     bg.setBoardObj(obj);
                     bg.futureTelegram.setResponse(data,temp);
+                    //log(obj);
                     //if(error)//錯誤還沒處理
                     client.addFutureData(bg.boardObj);
                 } else if (temp.tr == "5001") {
@@ -221,6 +241,8 @@ var Client = {
             config.calculateKChartData(temp.c, bg.boardObj);
             client.runChartCode = bg.code;
             client.runChartManager.show(bg.boardObj);
+
+            client.quoteDetailDataManager.setDataSource(bg.boardObj.kChartDataList);
         };
 
         client.getFutureGoodsByMid = function (mid) {

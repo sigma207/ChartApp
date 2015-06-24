@@ -119,7 +119,7 @@ var config = {
             //log("%s=%s",count,str);
         }
         //timeEnd("quoteFormat");
-        //log(obj);
+        console.log(obj);
         return obj;
     },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],

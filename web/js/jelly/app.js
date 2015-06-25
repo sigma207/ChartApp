@@ -17,8 +17,8 @@ var Client = {
         client.futureDataLoaded = 0;
         client.futureDataList = [];
         client.runChartCode = "";
-        //client.testPushData = true;
-        client.testPushData = false;
+        client.testPushData = true;
+        //client.testPushData = false;
 
         client.init = function () {
             var i;
@@ -37,9 +37,11 @@ var Client = {
                 bg.futureRegisterTelegram.setWebSocketManager( client.quoteWsm);
                 bg.futureUnRegisterTelegram.setWebSocketManager( client.quoteWsm);
                 bg.kChartTelegram.setWebSocketManager(client.kChartWsm);
+                bg.quoteDetailsTelegram.setWebSocketManager(client.kChartWsm);
                 bg.futureTelegram.setRequest(config.getBoardRequest(bg.code, bg.boardMid));
                 bg.futureRegisterTelegram.setRequest(config.getBoardRegisterRequest(bg.code, bg.boardMid));
                 bg.futureUnRegisterTelegram.setRequest(config.getBoardUnRegisterRequest(bg.code, bg.boardMid));
+
                 //bg.boardUnRegisterRequestData = config.getBoardUnRegisterRequest(bg.code, bg.boardMid);
                 client.futureGoodsMap[bg.code] = bg;
                 client.futureDataTotal++;
@@ -64,9 +66,12 @@ var Client = {
 
         client.initQuoteDetailsTable = function () {
             client.quoteDetailsTable = CanvasTable.createNew(document.getElementById("quoteDetailsCanvas"));
-            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time","時間",{textFillStyle:FutureTableStyle.CODE_COLOR}));
-            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("volume","單量",{textFillStyle:FutureTableStyle.CODE_COLOR}));
-            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("close","成交價",{textFillStyle:FutureTableStyle.CODE_COLOR}));
+            client.quoteDetailsTable.updateTableRowHeight(15);
+            client.quoteDetailsTable.sortable = false;
+            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time","時間",{textFillStyle:QuoteDetailStyle.DEFAULT_COLOR}));
+            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{decimal:0,textFillStyle:QuoteDetailStyle.DEFAULT_COLOR}));
+            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
+            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
             client.quoteDetailsTable.addLayer();
             client.quoteDetailDataManager.addRenderer(client.quoteDetailsTable);
 
@@ -145,7 +150,7 @@ var Client = {
             var temp = JSON.parse(data);
             var obj, bg, code;
             if (temp.tp == "p") {//push
-                log("push data onFutureData");
+                //log("push data onFutureData");
                 obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
                 bg = client.futureGoodsMap[obj.code];//with out mid
                 bg.boardPushData = data;
@@ -153,6 +158,8 @@ var Client = {
                 if (client.runChartCode == bg.code) {
                     bg.updateTick(obj);
                     client.runChartManager.refresh();
+                    bg.addQuoteDetail(obj);
+                    client.quoteDetailsTable.update();
                 }
                 bg.updateBoardObj(obj);
                 //log(client.futureDataList.indexOf(bg.boardObj));
@@ -164,7 +171,7 @@ var Client = {
                     bg = client.getFutureGoodsByMid(temp.mid);
                     bg.setBoardObj(obj);
                     bg.futureTelegram.setResponse(data,temp);
-                    //log(obj);
+                    log(obj);
                     //if(error)//錯誤還沒處理
                     client.addFutureData(bg.boardObj);
                 } else if (temp.tr == "5001") {
@@ -190,6 +197,11 @@ var Client = {
                     } else {
                         config.unZip(temp, client.onKChartDataLoaded);
                     }
+                } else if(temp.tr=="1012"){
+                    var bg = client.getFutureGoodsByMid(temp.mid);
+                    bg.quoteDetailsTelegram.setResponse(data,temp);
+                    config.unZip(temp, client.onQuoteDetailsLoaded);
+                    log(temp);
                 }
             }
         };
@@ -203,13 +215,18 @@ var Client = {
 
                 if(client.testPushData)client.requestRegisterBoard();
                 var bg = client.futureDataList[0];
-                client.requestKChart(bg.code);
+                client.futureDetails(bg.code);
             }
+        };
+
+        client.futureDetails = function (code) {
+            client.requestKChart(code);
+            client.requestQuoteDetails(code);
         };
 
         client.onBoardRowClick = function (e, rowData) {
             log("rowData.code=%s",rowData.code);
-            client.requestKChart(rowData.code);
+            client.futureDetails(rowData.code);
         };
 
         client.requestFuture = function () {
@@ -222,6 +239,13 @@ var Client = {
             for (var key in client.futureGoodsMap) {
                 client.futureGoodsMap[key].futureRegisterTelegram.sendRequest();
             }
+        };
+
+        client.requestQuoteDetails = function (code) {
+            var bg = client.futureGoodsMap[code];
+
+            bg.quoteDetailsTelegram.setRequest(config.getQuoteDetailsRequest(bg.code,bg.boardMid,bg.boardObj.quoteDate,bg.boardObj.quoteIndex));
+            bg.quoteDetailsTelegram.sendRequest();
         };
 
         client.requestKChart = function (code) {
@@ -242,7 +266,16 @@ var Client = {
             client.runChartCode = bg.code;
             client.runChartManager.show(bg.boardObj);
 
-            client.quoteDetailDataManager.setDataSource(bg.boardObj.kChartDataList);
+        };
+
+        client.onQuoteDetailsLoaded = function (temp) {
+            log("onQuoteDetailsLoaded mid=%s", temp.mid);
+            var bg = client.getFutureGoodsByMid(temp.mid);
+
+            config.calculateQuoteDetailsData(temp.c, bg.boardObj);
+            //client.runChartCode = bg.code;
+            //client.runChartManager.show(bg.boardObj);
+            client.quoteDetailDataManager.setDataSource(bg.boardObj.quoteDetailList);
         };
 
         client.getFutureGoodsByMid = function (mid) {
@@ -384,6 +417,7 @@ function FutureGoods(future, i) {
     this.futureRegisterTelegram = new Telegram();
     this.futureUnRegisterTelegram = new Telegram();
     this.kChartTelegram = new Telegram();
+    this.quoteDetailsTelegram = new Telegram();
     this.boardPushData = undefined;
     this.boardObj = undefined;
     var bg = this;
@@ -425,6 +459,12 @@ function FutureGoods(future, i) {
             list.push(newTickData);
             log("addTick close=%s,volume=%s,time=%s", newTickData.close, newTickData.volume, newTickData.time);
         }
+    };
+
+    this.addQuoteDetail = function (obj) {
+        var quoteDetails = new QuoteDetail(obj.code,obj.quoteDate,obj.tickTime,obj.last,obj.volume,obj.totalVolume,obj.quoteIndex,obj.last-bg.boardObj.preClose);
+        bg.boardObj.quoteDetailList.pop();
+        bg.boardObj.quoteDetailList.unshift(quoteDetails);
     };
 
     this.calculate = function () {

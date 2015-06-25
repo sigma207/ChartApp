@@ -3,36 +3,25 @@
  */
 var QuoteDetailStyle = {
     DEFAULT_COLOR: "white",
+    upDownColor: function (rowData) {
+        if (rowData.upDown == 0) {
+            return "#ffffff";
+        } else {
+            return (rowData.upDown > 0) ? "#ad0000" : "#00a900";
+        }
+    },
     createNew: function (table) {
         var ds = {};
         var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
         var headerCtx = table.layerManager.getLayer(CanvasTable.HEADER_LAYER_INDEX).ctx;
         var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
-
-        //var valueFloatCtx = table.layerManager.getLayer(CanvasTable.VALUE_FLOAT_LAYER_INDEX).ctx;
-        //var valueStationaryCtx = table.layerManager.getLayer(CanvasTable.VALUE_STATIONARY_LAYER_INDEX).ctx;
-        //var headerFloatCtx = table.layerManager.getLayer(CanvasTable.HEADER_FLOAT_LAYER_INDEX).ctx;
-        //var headerStationary = table.layerManager.getLayer(CanvasTable.HEADER_STATIONARY_LAYER_INDEX).ctx;
-        baseCtx.font = "16px Helvetica";
+        baseCtx.font = "12px Helvetica";
         if (typeof headerCtx !== typeof undefined) {
-            headerCtx.font = "16px Helvetica";
+            headerCtx.font = "12px Helvetica";
         }
         if (typeof contentCtx !== typeof undefined) {
-            contentCtx.font = "16px Helvetica";
+            contentCtx.font = "12px Helvetica";
         }
-
-        //if (typeof valueFloatCtx !== typeof undefined) {
-        //    valueFloatCtx.font = "16px Helvetica";
-        //}
-        //if (typeof valueStationaryCtx !== typeof undefined) {
-        //    valueStationaryCtx.font = "16px Helvetica";
-        //}
-        //if (typeof headerFloatCtx !== typeof undefined) {
-        //    headerFloatCtx.font = "16px Helvetica";
-        //}
-        //if (typeof headerStationary !== typeof undefined) {
-        //    headerStationary.font = "16px Helvetica";
-        //}
 
         ds.headBackground = function (ctx, x, y, width, height) {
             var lg = ctx.createLinearGradient(0, 0, 0, height);
@@ -44,11 +33,7 @@ var QuoteDetailStyle = {
 
         ds.bodyRowBackground = function (ctx, x, y, width, height, rowData, rowIndex) {
             ctx.save();
-            if (rowIndex % 2 == 0) {
-                ctx.fillStyle = "#272727";
-            } else {
-                ctx.fillStyle = "#0f0f0f";
-            }
+            ctx.fillStyle = "#0f0f0f";
             ctx.fillRect(x, y, width, height);
             ctx.restore();
         };
@@ -57,7 +42,7 @@ var QuoteDetailStyle = {
             ctx.save();
             ctx.fillStyle = "white";
             ctx.textBaseline = "middle";
-            ctx.fillText(column.title, x, table.rowMiddle);
+            ctx.fillText(column.title, x, table.headerMiddle);
             ctx.restore();
         };
 
@@ -66,7 +51,29 @@ var QuoteDetailStyle = {
             ctx.fillStyle = column.getFillStyle(rowData);
             ctx.textBaseline = "middle";
             ctx.textAlign = "right";
-            ctx.fillText(column.getValue(rowData), x, y);
+            var value = column.getValue(rowData);
+            ctx.fillText(value, x, y);
+            if (column.field == "upDown") {
+                var valueWidth = ctx.measureText(value).width;
+                var arrowStartX = x - valueWidth - 10;
+                var top = (y - table.rowMiddle ) + 2;
+                var bottom = (y + table.rowMiddle ) - 4;
+                if (value > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(arrowStartX, bottom);
+                    ctx.lineTo(arrowStartX + 4, top);
+                    ctx.lineTo(arrowStartX + 8, bottom);
+                    ctx.fill();
+                } else if (value < 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(arrowStartX, top);
+                    ctx.lineTo(arrowStartX + 4, bottom);
+                    ctx.lineTo(arrowStartX + 8, top);
+                    ctx.fill();
+                }
+
+            }
+
             ctx.restore();
         };
 

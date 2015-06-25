@@ -82,27 +82,33 @@ var DataSourceManager = {
             logTime("allocateData");
             var renderRowCount = dsr.getRenderRowCount();
             dsr.renderDataGroup = [];
-            for (var s = 0; s < dsr.split; s++) {
-                dsr.renderDataGroup.push([]);
-            }
-            dsr.renderDataGroupSize = dsr.renderDataGroup.length;
-            var rowIndex = 1;
-            var reportDataIndex = 0;
-            var currentReportData = dsr.renderDataGroup[reportDataIndex];
-            for (var i = 0; i < dsr.dataSize; i++) {
-                currentReportData.push(dsr.dataSource[i]);
-                if (rowIndex >= renderRowCount) {
-                    if (reportDataIndex == dsr.renderDataGroupSize - 1) {
-                        reportDataIndex = 0;
+            if(dsr.split==1){
+                dsr.renderDataGroup.push(dsr.dataSource);
+                dsr.renderDataGroupSize = dsr.renderDataGroup.length;
+            }else{
+                for (var s = 0; s < dsr.split; s++) {
+                    dsr.renderDataGroup.push([]);
+                }
+                dsr.renderDataGroupSize = dsr.renderDataGroup.length;
+                var rowIndex = 1;
+                var reportDataIndex = 0;
+                var currentReportData = dsr.renderDataGroup[reportDataIndex];
+                for (var i = 0; i < dsr.dataSize; i++) {
+                    currentReportData.push(dsr.dataSource[i]);
+                    if (rowIndex >= renderRowCount) {
+                        if (reportDataIndex == dsr.renderDataGroupSize - 1) {
+                            reportDataIndex = 0;
+                        } else {
+                            reportDataIndex++;
+                        }
+                        currentReportData = dsr.renderDataGroup[reportDataIndex];
+                        rowIndex = 1;
                     } else {
-                        reportDataIndex++;
+                        rowIndex++;
                     }
-                    currentReportData = dsr.renderDataGroup[reportDataIndex];
-                    rowIndex = 1;
-                } else {
-                    rowIndex++;
                 }
             }
+
             logTimeEnd("allocateData");
         };
 

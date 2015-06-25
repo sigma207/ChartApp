@@ -20,6 +20,9 @@ var config = {
     getKChartRequest: function (code, mid, date, type) {
         return '{"srv":"TICK","tr":"1002","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"' + code + '","tp":"' + type + '","td":"' + date + '","nt":5}}';
     },
+    getQuoteDetailsRequest: function (code, mid, date, index) {
+        return '{"srv":"TICK","tr":"1012","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"'+code+'","td":"'+date+'","idx":"'+index+'","nt":"100"}}';
+    },
     unZip: function (temp, callbackFun) {
         var objContentBase64EncodedCompressedBytesInStr = temp['c'].replace('\r\n', '');
         //DOM Exception 5 INVALID CHARACTER error on valid base64 image string in javascript
@@ -73,6 +76,29 @@ var config = {
         log(boardObj.kChartDataList);
         log("maxVolume=%s", boardObj.volumeMax);
     },
+    calculateQuoteDetailsData: function (c, boardObj) {
+        boardObj.quoteDetailList = [];
+        var list = c.split("\r\n");
+        var listCount = list.length;
+        var propertyCount = config.quoteDetailProperties.length;
+        var row = [];
+        var property = "";
+        var obj = {};
+        var data;
+        for (var i = 0; i < listCount-1; i++) {
+            if (list[i].length > 0) {
+                row = list[i].split(",");
+                obj = {};
+                for (var j = 0; j < propertyCount; j++) {
+                    property = config.quoteDetailProperties[j];
+                    obj[property] = row[j];
+                }
+                data = new QuoteDetail(obj.code, obj.date, obj.time, obj.last, obj.volume, obj.totalVolume, obj.index, obj.last-boardObj.preClose);
+                boardObj.quoteDetailList.push(data);
+            }
+        }
+        //log(boardObj.quoteDetailList);
+    },
     boardDataFormat: function (columnMap,data) {
         var obj = {};
         var firstCommaIndex = data.indexOf(",");
@@ -119,10 +145,11 @@ var config = {
             //log("%s=%s",count,str);
         }
         //timeEnd("quoteFormat");
-        console.log(obj);
+        //console.log(obj);
         return obj;
     },
     kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
+    quoteDetailProperties: ["code", "date", "time", "last", "volume", "totalVolume", "index"],
     futureList: [
         new Future("6ECC", "歐元期", 1.22, "060000", "050000"),
         new Future("CLCC", "輕油期", 0.4, "060000", "040000"),
@@ -236,4 +263,15 @@ function TickData(code, date, time, open, high, low, close, volume) {
     this.low = parseFloat(low);
     this.close = parseFloat(close);
     this.volume = parseInt(volume);
+}
+
+function QuoteDetail(code,date,time,last,volume,totalVolume,index,upDown){
+    this.code = code;
+    this.date = date;
+    this.time = time;
+    this.last = parseFloat(last);
+    this.volume = parseInt(volume);
+    this.totalVolume = parseInt(totalVolume);
+    this.index = parseInt(index);
+    this.upDown = parseFloat(upDown);
 }

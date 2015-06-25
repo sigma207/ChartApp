@@ -6,7 +6,11 @@ var FutureTableStyle = {
     CODE_COLOR: "#ffb70a",
     DEFAULT_COLOR: "white",
     upDownColor: function (rowData) {
-        return (rowData.upDown > 0) ? "#ad0000" : "#00a900";
+        if(rowData.upDown==0){
+            return "#ffffff";
+        } else {
+            return (rowData.upDown > 0) ? "#ad0000" : "#00a900";
+        }
     },
     createNew: function (table) {
         var ds = {};
@@ -62,7 +66,7 @@ var FutureTableStyle = {
             ctx.save();
             ctx.fillStyle = "white";
             ctx.textBaseline = "middle";
-            ctx.fillText(column.title, x, table.rowMiddle);
+            ctx.fillText(column.title, x, table.headerMiddle);
             ctx.restore();
         };
 

@@ -79,7 +79,7 @@ var DataSourceManager = {
         };
 
         dsr.allocateData = function () {
-            logTime("allocateData");
+            //logTime("allocateData");
             var renderRowCount = dsr.getRenderRowCount();
             dsr.renderDataGroup = [];
             if(dsr.split==1){
@@ -109,7 +109,7 @@ var DataSourceManager = {
                 }
             }
 
-            logTimeEnd("allocateData");
+            //logTimeEnd("allocateData");
         };
 
         dsr.updateSortColumn = function (sortIndex, orderBy) {

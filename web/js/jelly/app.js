@@ -9,6 +9,8 @@ var Client = {
         client.kChartWsm = WebSocketManager.createNew(config.kChartWsUrl, "kChart");
         client.columnMap = {};
         client.quoteDetailsTable = undefined;
+        client.quoteDetailsUpDownColumn = undefined;
+        client.quoteDetailsLastColumn = undefined;
         client.canvasTable = undefined;
         client.futureDataManager = undefined;
         client.quoteDetailDataManager = undefined;
@@ -70,8 +72,8 @@ var Client = {
             client.quoteDetailsTable.sortable = false;
             client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time","時間",{textFillStyle:QuoteDetailStyle.DEFAULT_COLOR}));
             client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{decimal:0,textFillStyle:QuoteDetailStyle.DEFAULT_COLOR}));
-            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
-            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
+            client.quoteDetailsUpDownColumn =client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
+            client.quoteDetailsLastColumn =client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
             client.quoteDetailsTable.addLayer();
             client.quoteDetailDataManager.addRenderer(client.quoteDetailsTable);
 
@@ -159,7 +161,7 @@ var Client = {
                     bg.updateTick(obj);
                     client.runChartManager.refresh();
                     bg.addQuoteDetail(obj);
-                    client.quoteDetailsTable.update();
+                    client.quoteDetailsTable.updateDataSize();
                 }
                 bg.updateBoardObj(obj);
                 //log(client.futureDataList.indexOf(bg.boardObj));
@@ -275,6 +277,8 @@ var Client = {
             config.calculateQuoteDetailsData(temp.c, bg.boardObj);
             //client.runChartCode = bg.code;
             //client.runChartManager.show(bg.boardObj);
+            client.quoteDetailsUpDownColumn.updateDecimal(bg.boardObj.scale);
+            client.quoteDetailsLastColumn.updateDecimal(bg.boardObj.scale);
             client.quoteDetailDataManager.setDataSource(bg.boardObj.quoteDetailList);
         };
 

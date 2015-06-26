@@ -35,9 +35,9 @@ var Client = {
             client.futureDataTotal = 0;
             for (i = 0; i < config.futureList.length; i++) {
                 bg = new FutureGoods(config.futureList[i], client.futureDataTotal);
-                bg.futureTelegram.setWebSocketManager( client.quoteWsm);
-                bg.futureRegisterTelegram.setWebSocketManager( client.quoteWsm);
-                bg.futureUnRegisterTelegram.setWebSocketManager( client.quoteWsm);
+                bg.futureTelegram.setWebSocketManager(client.quoteWsm);
+                bg.futureRegisterTelegram.setWebSocketManager(client.quoteWsm);
+                bg.futureUnRegisterTelegram.setWebSocketManager(client.quoteWsm);
                 bg.kChartTelegram.setWebSocketManager(client.kChartWsm);
                 bg.quoteDetailsTelegram.setWebSocketManager(client.kChartWsm);
                 bg.futureTelegram.setRequest(config.getBoardRequest(bg.code, bg.boardMid));
@@ -49,7 +49,7 @@ var Client = {
                 client.futureDataTotal++;
             }
 
-            client.runChartManager = runChartManager.createNew();
+            client.runChartManager = runChartManager2.createNew();
 
             //client.futureTable = ReportTable.createNew("futureTable");
             //client.futureTable.addTdClassRenderer("upDown", client.getFutureUpDownClass);
@@ -70,10 +70,19 @@ var Client = {
             client.quoteDetailsTable = CanvasTable.createNew(document.getElementById("quoteDetailsCanvas"));
             client.quoteDetailsTable.updateTableRowHeight(15);
             client.quoteDetailsTable.sortable = false;
-            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time","時間",{textFillStyle:QuoteDetailStyle.DEFAULT_COLOR}));
-            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{decimal:0,textFillStyle:QuoteDetailStyle.DEFAULT_COLOR}));
-            client.quoteDetailsUpDownColumn =client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
-            client.quoteDetailsLastColumn =client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:0,textFillStyleFunction:QuoteDetailStyle.upDownColor}));
+            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time", "時間", {textFillStyle: QuoteDetailStyle.DEFAULT_COLOR}));
+            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("volume", "單量", {
+                decimal: 0,
+                textFillStyle: QuoteDetailStyle.DEFAULT_COLOR
+            }));
+            client.quoteDetailsUpDownColumn = client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("upDown", "漲跌", {
+                decimal: 0,
+                textFillStyleFunction: QuoteDetailStyle.upDownColor
+            }));
+            client.quoteDetailsLastColumn = client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("last", "成交價", {
+                decimal: 0,
+                textFillStyleFunction: QuoteDetailStyle.upDownColor
+            }));
             client.quoteDetailsTable.addLayer();
             client.quoteDetailDataManager.addRenderer(client.quoteDetailsTable);
 
@@ -88,21 +97,53 @@ var Client = {
 
             client.canvasTable = CanvasTable.createNew(document.getElementById("tableCanvas"));
 
-            client.canvasTable.addColumn(CanvasColumn.createNew("code","代號",{textFillStyle:FutureTableStyle.CODE_COLOR}));
-            client.canvasTable.addColumn(CanvasColumn.createNew("name","商品",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid","委買價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("ask","委賣價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("last","成交價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume","單量",{textFillStyle:FutureTableStyle.VOLUME_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume","成交量",{textFillStyle:FutureTableStyle.VOLUME_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDown","漲跌",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDownPercentage","漲跌幅",{decimal:2,percent:true,textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("high","最高價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("low","最低價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("open","開盤價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
-            client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate","交易日",{orgFormat:"YYYYMMDD",displayFormat:"YYYY-MM-DD",textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
-            client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime","更新時間",{textFillStyle:FutureTableStyle.DEFAULT_COLOR}));
-            client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose","昨結價",{decimal:"scale",textFillStyleFunction:FutureTableStyle.upDownColor}));
+            client.canvasTable.addColumn(CanvasColumn.createNew("code", "代號", {textFillStyle: FutureTableStyle.CODE_COLOR}));
+            client.canvasTable.addColumn(CanvasColumn.createNew("name", "商品", {textFillStyle: FutureTableStyle.DEFAULT_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("bid", "委買價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("ask", "委賣價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("last", "成交價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("volume", "單量", {textFillStyle: FutureTableStyle.VOLUME_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("totalVolume", "成交量", {textFillStyle: FutureTableStyle.VOLUME_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDown", "漲跌", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("upDownPercentage", "漲跌幅", {
+                decimal: 2,
+                percent: true,
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("high", "最高價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("low", "最低價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("open", "開盤價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
+            client.canvasTable.addColumn(CanvasDateColumn.createNew("tradeDate", "交易日", {
+                orgFormat: "YYYYMMDD",
+                displayFormat: "YYYY-MM-DD",
+                textFillStyle: FutureTableStyle.DEFAULT_COLOR
+            }));
+            client.canvasTable.addColumn(CanvasTimeColumn.createNew("tickTime", "更新時間", {textFillStyle: FutureTableStyle.DEFAULT_COLOR}));
+            client.canvasTable.addColumn(CanvasNumberColumn.createNew("preClose", "昨結價", {
+                decimal: "scale",
+                textFillStyleFunction: FutureTableStyle.upDownColor
+            }));
             client.canvasTable.updateLockColumnCount(2);
             client.canvasTable.addLayer();
             client.futureDataManager.addRenderer(client.canvasTable);
@@ -172,14 +213,14 @@ var Client = {
                     obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
                     bg = client.getFutureGoodsByMid(temp.mid);
                     bg.setBoardObj(obj);
-                    bg.futureTelegram.setResponse(data,temp);
+                    bg.futureTelegram.setResponse(data, temp);
                     log(obj);
                     //if(error)//錯誤還沒處理
                     client.addFutureData(bg.boardObj);
                 } else if (temp.tr == "5001") {
                     obj = JSON.parse(temp.c);
                     bg = client.getFutureGoodsByMid(temp.mid);
-                    bg.futureRegisterTelegram.setResponse(data,temp);
+                    bg.futureRegisterTelegram.setResponse(data, temp);
                 }
             }
         };
@@ -190,7 +231,7 @@ var Client = {
             if (temp.tp == "s") {
                 if (temp.tr == "1002") {
                     var bg = client.getFutureGoodsByMid(temp.mid);
-                    bg.kChartTelegram.setResponse(data,temp);
+                    bg.kChartTelegram.setResponse(data, temp);
                     if (temp.error == "1") {
                         var c = JSON.parse(temp.c);
                         if (typeof c !== typeof undefined && c.hasOwnProperty("ec")) {
@@ -199,9 +240,9 @@ var Client = {
                     } else {
                         config.unZip(temp, client.onKChartDataLoaded);
                     }
-                } else if(temp.tr=="1012"){
+                } else if (temp.tr == "1012") {
                     var bg = client.getFutureGoodsByMid(temp.mid);
-                    bg.quoteDetailsTelegram.setResponse(data,temp);
+                    bg.quoteDetailsTelegram.setResponse(data, temp);
                     config.unZip(temp, client.onQuoteDetailsLoaded);
                     log(temp);
                 }
@@ -215,7 +256,7 @@ var Client = {
             if (client.futureDataLoaded == client.futureDataTotal) {
                 client.futureDataManager.setDataSource(client.futureDataList);
 
-                if(client.testPushData)client.requestRegisterBoard();
+                if (client.testPushData)client.requestRegisterBoard();
                 var bg = client.futureDataList[0];
                 client.futureDetails(bg.code);
             }
@@ -227,7 +268,7 @@ var Client = {
         };
 
         client.onBoardRowClick = function (e, rowData) {
-            log("rowData.code=%s",rowData.code);
+            log("rowData.code=%s", rowData.code);
             client.futureDetails(rowData.code);
         };
 
@@ -246,7 +287,7 @@ var Client = {
         client.requestQuoteDetails = function (code) {
             var bg = client.futureGoodsMap[code];
 
-            bg.quoteDetailsTelegram.setRequest(config.getQuoteDetailsRequest(bg.code,bg.boardMid,bg.boardObj.quoteDate,bg.boardObj.quoteIndex));
+            bg.quoteDetailsTelegram.setRequest(config.getQuoteDetailsRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, bg.boardObj.quoteIndex));
             bg.quoteDetailsTelegram.sendRequest();
         };
 
@@ -275,8 +316,6 @@ var Client = {
             var bg = client.getFutureGoodsByMid(temp.mid);
 
             config.calculateQuoteDetailsData(temp.c, bg.boardObj);
-            //client.runChartCode = bg.code;
-            //client.runChartManager.show(bg.boardObj);
             client.quoteDetailsUpDownColumn.updateDecimal(bg.boardObj.scale);
             client.quoteDetailsLastColumn.updateDecimal(bg.boardObj.scale);
             client.quoteDetailDataManager.setDataSource(bg.boardObj.quoteDetailList);
@@ -305,52 +344,15 @@ var Client = {
         return client;
     }
 };
-
-var runChartManager = {
+var runChartManager2 = {
     createNew: function () {
-
         var cm = {};
         var chart = RunChart.createNew(document.getElementById("runChartCanvas"));
+        var dataDriven = DataDriven.createNew(chart);
         cm.chart = chart;
-
-        cm.show = function (boardObj) {
-            if (typeof chart.dataDriven === typeof undefined) {
-                var dataDriven = DataDriven.createNew(chart);
-                dataDriven.setSource(boardObj, "kChartDataList");
-                chart.setDataDriven(dataDriven);
-                chart.dataDriven.generate();
-            } else {
-                chart.dataDriven.setSource(boardObj, "kChartDataList");
-                chart.dataDriven.generate();
-            }
-
-            var startTime = moment(boardObj.quoteDate + boardObj.startTime, "YYYYMMDDHHmmss");
-            var endTime = moment(boardObj.quoteDate + boardObj.endTime, "YYYYMMDDHHmmss");
-            if (startTime.isAfter(endTime)) {
-                endTime.add(1, "day");
-            }
-
-            if (typeof chart.periodAxis.timeTick === typeof undefined) {
-                var timeTick = TimeTick.createNew();
-                timeTick.changeType(TickType.MINUTE);
-                timeTick.changeTime(startTime, endTime);
-                chart.periodAxis.setTimeTick(timeTick);
-                chart.periodAxis.timeTick.generateTick();
-            } else {
-                chart.periodAxis.timeTick.changeTime(startTime, endTime);
-                chart.periodAxis.timeTick.generateTick();
-            }
-            chart.draw();
-        };
-
-        cm.refresh = function () {
-            chart.dataDriven.generate();
-            chart.draw();
-        };
-
         cm.init = function () {
-
             chart.padding(100, 20, 100, 40);
+
             chart.init();
             var area = chart.area;
 
@@ -359,33 +361,126 @@ var runChartManager = {
             var valueAxisHeight = area.height - volumeAxisHeight - spaceHeight;
 
             var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);
+            periodAxis.createTimeTick();
             var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, volumeAxisHeight);
             var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, valueAxisHeight);
-            var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
+            //var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
+
+            chart.setDataDriven(dataDriven);
+            periodAxis.timeTick.changeType(TickType.MINUTE);
 
             var drawStyle = DrawStyle.createNew(chart);
 
             chart.addLayerDrawFunction(0, drawStyle.drawBackground);
 
-            valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
+            valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);//上方的底線
             valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisTicks);
-            volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
+            volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);//下方的頂線
             volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisTicks);
             valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
             volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
 
             periodAxis.addLayerDrawFunction(1, drawStyle.drawPeriodAxisTicks);
 
-            mouse.addLayerDrawFunction(2, drawStyle.drawMouseLayerMove);
+            //mouse.addLayerDrawFunction(2, drawStyle.drawMouseLayerMove);
         };
-
+        cm.show = function (boardObj) {
+            var startTime = moment(boardObj.quoteDate + boardObj.startTime, "YYYYMMDDHHmmss");
+            var endTime = moment(boardObj.quoteDate + boardObj.endTime, "YYYYMMDDHHmmss");
+            if (startTime.isAfter(endTime)) {
+                endTime.add(1, "day");
+            }
+            chart.periodAxis.timeTick.changeTime(startTime, endTime);
+            dataDriven.setSource(boardObj, "kChartDataList");
+            chart.start();
+        };
+        cm.refresh = function () {
+            dataDriven.calculate();
+        };
         cm.init();
-
         return cm;
     }
 };
+//var runChartManager = {
+//    createNew: function () {
+//
+//        var cm = {};
+//        var chart = RunChart.createNew(document.getElementById("runChartCanvas"));
+//        cm.chart = chart;
+//
+//        cm.show = function (boardObj) {
+//            if (typeof chart.dataDriven === typeof undefined) {
+//                var dataDriven = DataDriven.createNew(chart);
+//                dataDriven.setSource(boardObj, "kChartDataList");
+//                chart.setDataDriven(dataDriven);
+//                chart.dataDriven.generate();
+//            } else {
+//                chart.dataDriven.setSource(boardObj, "kChartDataList");
+//                chart.dataDriven.generate();
+//            }
+//
+//            var startTime = moment(boardObj.quoteDate + boardObj.startTime, "YYYYMMDDHHmmss");
+//            var endTime = moment(boardObj.quoteDate + boardObj.endTime, "YYYYMMDDHHmmss");
+//            if (startTime.isAfter(endTime)) {
+//                endTime.add(1, "day");
+//            }
+//
+//            if (typeof chart.periodAxis.timeTick === typeof undefined) {
+//                var timeTick = TimeTick.createNew();
+//                timeTick.changeType(TickType.MINUTE);
+//                timeTick.changeTime(startTime, endTime);
+//                chart.periodAxis.setTimeTick(timeTick);
+//                chart.periodAxis.timeTick.generateTick();
+//            } else {
+//                chart.periodAxis.timeTick.changeTime(startTime, endTime);
+//                chart.periodAxis.timeTick.generateTick();
+//            }
+//            chart.draw();
+//        };
+//
+//        cm.refresh = function () {
+//            chart.dataDriven.generate();
+//            chart.draw();
+//        };
+//
+//        cm.init = function () {
+//
+//            chart.padding(100, 20, 100, 40);
+//            chart.init();
+//            var area = chart.area;
+//
+//            var spaceHeight = area.height / 20;
+//            var volumeAxisHeight = area.height / 4;
+//            var valueAxisHeight = area.height - volumeAxisHeight - spaceHeight;
+//
+//            var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);
+//            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, volumeAxisHeight);
+//            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, valueAxisHeight);
+//            var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
+//
+//            var drawStyle = DrawStyle.createNew(chart);
+//
+//            chart.addLayerDrawFunction(0, drawStyle.drawBackground);
+//
+//            valueAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
+//            valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisTicks);
+//            volumeAxis.addLayerDrawFunction(0, drawStyle.drawValueAxis);
+//            volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisTicks);
+//            valueAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
+//            volumeAxis.addLayerDrawFunction(1, drawStyle.drawValueAxisData);
+//
+//            periodAxis.addLayerDrawFunction(1, drawStyle.drawPeriodAxisTicks);
+//
+//            mouse.addLayerDrawFunction(2, drawStyle.drawMouseLayerMove);
+//        };
+//
+//        cm.init();
+//
+//        return cm;
+//    }
+//};
 
-function Telegram(){
+function Telegram() {
     this.requestText = undefined;
     this.responseText = undefined;
     this.responseObj = undefined;
@@ -403,7 +498,7 @@ function Telegram(){
         t.requestText = text;
     };
 
-    this.setResponse = function (text,obj) {
+    this.setResponse = function (text, obj) {
         t.responseText = text;
         t.responseObj = obj;
     };
@@ -466,7 +561,7 @@ function FutureGoods(future, i) {
     };
 
     this.addQuoteDetail = function (obj) {
-        var quoteDetails = new QuoteDetail(obj.code,obj.quoteDate,obj.tickTime,obj.last,obj.volume,obj.totalVolume,obj.quoteIndex,obj.last-bg.boardObj.preClose);
+        var quoteDetails = new QuoteDetail(obj.code, obj.quoteDate, obj.tickTime, obj.last, obj.volume, obj.totalVolume, obj.quoteIndex, obj.last - bg.boardObj.preClose);
         bg.boardObj.quoteDetailList.pop();
         bg.boardObj.quoteDetailList.unshift(quoteDetails);
     };

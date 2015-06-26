@@ -205,30 +205,30 @@ var CanvasTable = {
                 table.renderRowMap = {};
                 logTimeEnd("renderScroll");
             } else if(table.reRenderContent){
-                logTime("reRenderContent");
+                //logTime("reRenderContent");
                 if (table.lockColumnsWidth > 0) {
                     table.renderStationaryContent();
                 }
                 table.renderContent();
                 table.reRenderContent = false;
-                logTimeEnd("reRenderContent");
+                //logTimeEnd("reRenderContent");
             } else {
                 table.renderRowMapSize = 0;
                 for (var rowIndex in table.renderRowMap) {
                     if (rowIndex >= table.rowStartIndex && rowIndex <= table.rowEndIndex){
                         table.renderRowMapSize++;
                         table.renderRowMap[rowIndex] = table.rowStartY + (rowIndex - table.rowStartIndex) * table.rowHeight;
-                        log("rowIndex=%s,table.renderRowMap[rowIndex]=%s",rowIndex,table.renderRowMap[rowIndex]);
+                        //log("rowIndex=%s,table.renderRowMap[rowIndex]=%s",rowIndex,table.renderRowMap[rowIndex]);
                     }else{
                         delete table.renderRowMapSize[rowIndex];
                     }
                 }
                 if (table.renderRowMapSize > 0) {
-                    logTime("renderRowMapSize");
+                    //logTime("renderRowMapSize");
                     table.clearRowContent();
                     table.renderRowContent();
                     table.renderRowMap = {};
-                    logTimeEnd("renderRowMapSize");
+                    //logTimeEnd("renderRowMapSize");
                 }
             }
             table.columnHasChange = false;

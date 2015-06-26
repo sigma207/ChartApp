@@ -12,6 +12,7 @@ var DrawStyle = {
     createNew: function (runChart) {
         var ds = {};
         ds.drawBackground = function (ctx) {
+            log("drawBackground");
             var chart = this;
             ctx.save();
             ctx.fillStyle = "#1c1c1c";

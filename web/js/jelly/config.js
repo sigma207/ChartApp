@@ -5,8 +5,8 @@ FutureColumn.prototype.STR_TYPE = "str";
 FutureColumn.prototype.INT_TYPE = "int";
 FutureColumn.prototype.FLOAT_TYPE = "float";
 var config = {
-    quoteWsUrl: "ws://122.152.162.81:10890/websocket",
-    kChartWsUrl: "ws://122.152.162.81:10891/websocket",
+    quoteWsUrl: "ws://ctvdemogw.ja178.com:10890/websocket",
+    kChartWsUrl: "ws://ctvdemogw.ja178.com:10891/websocket",
     kChartMin1: "min1",
     getBoardRequest: function (code, mid) {
         return '{"srv":"QUOTE","tr":"5003","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"es":"G|' + code + '"}}';
@@ -21,7 +21,10 @@ var config = {
         return '{"srv":"TICK","tr":"1002","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"' + code + '","tp":"' + type + '","td":"' + date + '","nt":5}}';
     },
     getQuoteDetailsRequest: function (code, mid, date, index) {
-        return '{"srv":"TICK","tr":"1012","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"'+code+'","td":"'+date+'","idx":"'+index+'","nt":"100"}}';
+        return '{"srv":"TICK","tr":"1012","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"' + code + '","td":"' + date + '","idx":"' + index + '","nt":"100"}}';
+    },
+    getQuoteMinuteTickRequest: function (code, mid, date, startTime, endTime) {
+        return '{"srv":"TICK","tr":"1001","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"ex":"G","id":"' + code + '","td":"' + date + '","bt":"' + startTime + '","et":"' + endTime + '"}}';
     },
     unZip: function (temp, callbackFun) {
         var objContentBase64EncodedCompressedBytesInStr = temp['c'].replace('\r\n', '');
@@ -76,8 +79,8 @@ var config = {
         log(boardObj.kChartDataList);
         log("maxVolume=%s", boardObj.volumeMax);
     },
-    calculateQuoteDetailsData: function (c, boardObj) {
-        boardObj.quoteDetailList = [];
+    calculateTickData: function (c, boardObj, useList) {
+        //useList = [];
         var list = c.split("\r\n");
         var listCount = list.length;
         var propertyCount = config.quoteDetailProperties.length;
@@ -85,7 +88,7 @@ var config = {
         var property = "";
         var obj = {};
         var data;
-        for (var i = 0; i < listCount-1; i++) {
+        for (var i = 0; i < listCount - 1; i++) {
             if (list[i].length > 0) {
                 row = list[i].split(",");
                 obj = {};
@@ -93,13 +96,20 @@ var config = {
                     property = config.quoteDetailProperties[j];
                     obj[property] = row[j];
                 }
-                data = new QuoteDetail(obj.code, obj.date, obj.time, obj.last, obj.volume, obj.totalVolume, obj.index, obj.last-boardObj.preClose);
-                boardObj.quoteDetailList.push(data);
+                data = new QuoteDetail(obj.code, obj.date, obj.time, obj.last, obj.volume, obj.totalVolume, obj.index, obj.last - boardObj.preClose);
+                useList.push(data);
             }
         }
-        //log(boardObj.quoteDetailList);
     },
-    boardDataFormat: function (columnMap,data) {
+    calculateQuoteDetailsData: function (c, boardObj) {
+        boardObj.quoteIndexTickList = [];
+        config.calculateTickData(c, boardObj, boardObj.quoteIndexTickList);
+    },
+    calculateQuoteMinuteTickData: function (c, boardObj) {
+        boardObj.quoteMinuteTickList = [];
+        config.calculateTickData(c, boardObj, boardObj.quoteMinuteTickList);
+    },
+    boardDataFormat: function (columnMap, data) {
         var obj = {};
         var firstCommaIndex = data.indexOf(",");
         var code = data.substring(0, firstCommaIndex);
@@ -265,7 +275,7 @@ function TickData(code, date, time, open, high, low, close, volume) {
     this.volume = parseInt(volume);
 }
 
-function QuoteDetail(code,date,time,last,volume,totalVolume,index,upDown){
+function QuoteDetail(code, date, time, last, volume, totalVolume, index, upDown) {
     this.code = code;
     this.date = date;
     this.time = time;

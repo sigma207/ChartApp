@@ -58,14 +58,6 @@ var CanvasComponent = {
     }
 };
 
-var ChartMouse = {
-    createNew: function (mouseLayer) {
-        var chartMouse = CanvasComponent.createNew();
-        chartMouse.mouse = CanvasMouse.createNew(mouseLayer.canvas);
-        return chartMouse;
-    }
-};
-
 var Axis = {
     createNew: function (x, y, length) {
         var axis = CanvasComponent.createNew();
@@ -268,6 +260,28 @@ var PeriodAxis = {
                     data[valueAxis.column + "Y"] = valueAxis.y - valueAxis.convertY(data[valueAxis.column]);
                 }
             }
+            log(list);
+        };
+
+        axis.getDataByMouseX = function (x) {
+            var dataDriven = axis.chart.dataDriven;
+            var list = dataDriven.list;
+            var data, nextData;
+            for (var dataIndex = dataDriven.dataStartIndex; dataIndex <= dataDriven.dataEndIndex; dataIndex++) {
+                data = list[dataIndex];
+                if (x >= data.x) {
+                    if (dataIndex == dataDriven.dataEndIndex) {
+                        if (x == data.x)
+                            return data;
+                    } else {
+                        nextData = list[dataIndex + 1];
+                        if (x < nextData.x) {
+                            return data;
+                        }
+                    }
+                }
+            }
+            return undefined;
         };
 
         axis.changeDisplayRange = function (startIndex) {
@@ -333,11 +347,15 @@ var RunChart = {
         chart.area = {};
         chart.renderBackground = false;
         chart.renderPeriodTick = false;
+        chart.renderMouse = false;
+        chart.clearMouse = false;
         chart.dataDrivenChange = false;
         chart.timePeriodChange = false;
 
         chart.layerManager.addLayer("valueLayer");
         chart.layerManager.addLayer("mouseLayer");
+        chart.mouseHangCall = undefined;
+        chart.showList = [];
 
         chart.init = function () {
             chart.setArea();
@@ -350,6 +368,7 @@ var RunChart = {
             chart.area.width = chart.area.right - chart.area.x;
             chart.area.top = chart.PADDING_TOP;
             chart.area.height = chart.area.y - chart.area.top;
+            chart.area.middle = chart.area.x + (chart.area.width / 2);
         };
 
         chart.start = function () {
@@ -369,25 +388,91 @@ var RunChart = {
         chart.calculate = function () {
             var periodAxis = chart.periodAxis;
             var valueAxis, i;
+            var now = new Date().getTime();
 
-            if(chart.timePeriodChange){
+            if (chart.timePeriodChange) {
                 periodAxis.calculate();
                 chart.timePeriodChange = false;
             }
-            for (i = 0; i < periodAxis.valueAxisList.length; i++) {
-                valueAxis = periodAxis.valueAxisList[i];
-                valueAxis.calculate();
+
+            if (chart.dataDrivenChange) {
+                for (i = 0; i < periodAxis.valueAxisList.length; i++) {
+                    valueAxis = periodAxis.valueAxisList[i];
+                    valueAxis.calculate();
+                }
+                chart.dataDrivenChange = false;
+                chart.renderPeriodTick = true;
             }
-            chart.renderPeriodTick = true;
+
+            if (chart.chartMouse.inChartArea) {
+                if (chart.chartMouse.inAxisArea(periodAxis.scale, chart.area)) {
+
+                    var data = periodAxis.getDataByMouseX(chart.chartMouse.mouse.x);
+                    var clearShowList = true;
+                    if(chart.mouseHangX>0) {
+                        if (chart.mouseHangX == chart.chartMouse.mouse.x) {
+                            clearShowList = false;
+                        } else {
+                            chart.mouseHangX = 0;//不一樣 再重新開始檢查
+                        }
+                    }
+
+                    if(chart.mouseHangX==0){
+                        if (chart.chartMouse.mouse.x == chart.previousFrameX) {
+                            if(chart.mouseHangStartTime==0)chart.mouseHangStartTime = now;
+                        } else {
+                            chart.mouseHangStartTime = 0;
+                        }
+
+                        if (chart.mouseHangStartTime > 0 && now - chart.mouseHangStartTime > 500) {
+                            log("mouse has stopped 500ms on mouse.x:%s",chart.chartMouse.mouse.x);
+                            chart.mouseHangStartTime = 0;
+                            if (typeof data !== typeof undefined) {
+                                chart.mouseHangX = chart.chartMouse.mouse.x;
+                                chart.mouseHangCall.call(chart,data);
+                            }
+
+                        }
+                        chart.showList = [];
+                        if (typeof data !== typeof undefined) {
+                            chart.showList.push(data.high);
+                            chart.showList.push(data.low);
+                        }
+                    }
+
+                    //if(clearShowList){
+                    //    chart.showList = [];
+                    //    if (typeof data !== typeof undefined) {
+                    //        chart.showList.push(data.high);
+                    //        chart.showList.push(data.low);
+                    //    }
+                    //}
+
+                    chart.renderMouse = true;
+                } else {
+                    chart.renderMouse = false;
+                }
+            } else if (chart.chartMouse.justMoveOutChartArea) {
+                chart.clearMouse = true;
+                chart.chartMouse.justMoveOutChartArea = false;
+            }
+
+            chart.previousFrameX = chart.chartMouse.mouse.x;
         };
 
+        chart.previousFrameX = 0;
+        chart.mouseHangStartTime = 0;
+        chart.mouseHangX = 0;
         chart.render = function () {
+            //var now = new Date().getTime();
+            //log("now=%s",now);
+            //var delta = (now - chart.lastRenderTime)/1000;
+            //log("delta=%s",delta);
+            //chart.lastRenderTime = now;
+
             var periodAxis = chart.periodAxis;
             var valueAxis, i;
-            if (chart.dataDrivenChange) {
-                chart.calculate();
-                chart.dataDrivenChange = false;
-            }
+            chart.calculate();
 
             if (chart.renderBackground) {
                 chart.layerManager.clearLayer(0);
@@ -423,6 +508,14 @@ var RunChart = {
                 logTimeEnd("renderPeriodTick");
             }
 
+            if (chart.renderMouse) {
+                chart.layerManager.clearLayer(2);
+                chart.chartMouse.drawChartLayer(2);
+            } else if (chart.clearMouse) {
+                chart.layerManager.clearLayer(2);
+                chart.clearMouse = false;
+            }
+
             chart.animationId = requestAnimationFrame(chart.render);
         };
 
@@ -436,6 +529,74 @@ var RunChart = {
             chart.dataDriven = dataDriven;
         };
 
+        chart.createMouse = function (mouseLayer) {
+            chart.chartMouse = ChartMouse.createNew(chart, mouseLayer);
+            return chart.chartMouse;
+        };
+
         return chart;
+    }
+};
+
+var ChartMouse = {
+    createNew: function (chart, mouseLayer) {
+        var chartMouse = CanvasComponent.createNew();
+        chartMouse.mouse = CanvasMouse.createNew(mouseLayer.canvas);
+        chartMouse.layerManager = chart.layerManager;
+        //chartMouse.index = -1;
+        chartMouse.inChartArea = false;
+        chartMouse.dragging = false;
+        chartMouse.justMoveOutChartArea = false;
+
+        chartMouse.inAxisArea = function (periodAxisScale, axisArea) {
+            return (chartMouse.mouse.x >= axisArea.x + periodAxisScale && chartMouse.mouse.x <= axisArea.right - periodAxisScale) &&
+                (chartMouse.mouse.y <= axisArea.y && chartMouse.mouse.y >= axisArea.top);
+        };
+
+        chartMouse.mouseOver = function () {
+            chartMouse.inChartArea = true;
+        };
+
+        chartMouse.mouseMove = function () {
+        };
+
+        chartMouse.mouseDown = function () {
+            if (chartMouse.inAxisArea) {
+                chartMouse.dragging = true;
+            }
+        };
+
+        chartMouse.mouseOut = function () {
+            chartMouse.justMoveOutChartArea = true;
+            chartMouse.inChartArea = false;
+            //chart.layerManager.clearLayer(2);
+            chartMouse.dragging = false;
+        };
+
+        chartMouse.mouseUp = function () {
+            chartMouse.dragging = false;
+            //if (chart.chartMouse.inAxisArea) {
+            //    chart.mouseMove();
+            //}
+        };
+
+        chartMouse.mouseWheel = function (delta) {
+            //var periodAxis = chart.periodAxis;
+            //var start = periodAxis.addDisplayRange(delta);
+            //if (start != -1) {
+            //    chart.layerManager.clearLayer(2);
+            //    chart.drawPeriod();
+            //    chart.mouseMove();
+            //}
+        };
+
+        chartMouse.mouse.onOverCall = chartMouse.mouseOver;
+        chartMouse.mouse.onMoveCall = chartMouse.mouseMove;
+        chartMouse.mouse.onDownCall = chartMouse.mouseDown;
+        chartMouse.mouse.onOutCall = chartMouse.mouseOut;
+        chartMouse.mouse.onUpCall = chartMouse.mouseUp;
+        chartMouse.mouse.onWheelCall = chartMouse.mouseWheel;
+
+        return chartMouse;
     }
 };

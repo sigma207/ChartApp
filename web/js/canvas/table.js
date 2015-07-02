@@ -96,6 +96,10 @@ var CanvasTable = {
             cancelAnimationFrame(table.animationId);
         };
 
+        table.start = function () {
+            table.animationId = requestAnimationFrame(table.render);
+        };
+
         table.setDataSource = function (newData) {
             if (typeof table.animationId !== typeof undefined) {
                 table.stop();
@@ -103,8 +107,9 @@ var CanvasTable = {
             table.data = newData;
             table.updateDataSize();
             table.calculateColumnsWidth();
-            table.calculate();
-            table.animationId = requestAnimationFrame(table.render);
+            //table.calculate();
+            //table.animationId = requestAnimationFrame(table.render);
+            table.start();
         };
 
         table.updateDataSize = function () {
@@ -408,6 +413,7 @@ var CanvasTable = {
             ctx.restore();
         };
 
+
         table.calculate = function () {
             logTime("calculate:%s",canvas.id);
             table.calculateContent();
@@ -420,9 +426,11 @@ var CanvasTable = {
         };
 
         table.calculateContentHeight = function () {
-            //table.useVerticalScroll = false;
+            //所有資料佔用的高(筆數*行高)
             table.contentHeight = table.dataSize * table.rowHeight;
+            //顯示範圍的高(=canvas高-header高-水平捲軸高)
             table.canUseContentHeight = canvas.height - table.headerHeight - ((table.useHorizontalScroll)?table.horizontalScrollHeight:0);
+            //超過顯示範圍的高(=所有資料佔用的高-顯示範圍的高)
             table.overHeight = table.contentHeight - table.canUseContentHeight;
             if (table.overHeight > 0) {
                 table.useVerticalScroll = true;
@@ -430,17 +438,23 @@ var CanvasTable = {
         };
 
         table.calculateContentWidth = function () {
-            //table.useHorizontalScroll = false;
+            //顯示範圍的寬(=canvas寬-垂直捲軸寬)
             table.canUseContentWidth = canvas.width - ((table.useVerticalScroll) ? table.verticalScrollWidth : 0);
+            //超過顯示範圍的寬(=所有欄位寬-顯示範圍的寬)
             table.overWidth = table.columnsWidth - table.canUseContentWidth;
             if (table.overWidth > 0) {
                 table.useHorizontalScroll = true;
                 table.lockColumnsWidth = table.orgLockColumnWidth;
             } else {
+                //如果overWidth沒有>0就不用凍結欄位
                 table.lockColumnsWidth = 0;
             }
         };
 
+        /**
+         * 計算顯示範圍的寬高
+         * 計算2次是因為要先確認是否有使用scroll後要再重算一次(canUseContentHeight會因為有HorizontalScroll而需要重算,canUseContentWidth同理)
+         */
         table.calculateContent = function () {
             table.useVerticalScroll = false;
             table.useHorizontalScroll = false;

@@ -7,10 +7,22 @@ var DrawStyle = {
     TICK_LINE_WIDTH: 0.5,
     VOLUME_TEXT_COLOR: "#00FFF7",
     PRE_CLOSE_COLOR: "#FF1FC7",
+    GUIDE_WIRE_COLOR: "gray",
+    UP_DOWN_BLOCK_BACKGROUND_COLOR: "rgba(176,176,176,0.5)",
     RISE_COLOR: "#F20000",
     FALL_COLOR: "#00EB00",
     createNew: function (runChart) {
         var ds = {};
+
+        ds.init = function () {
+            var chartArea = runChart.area;
+            ds.upDownBlockWidth = 50;
+            ds.upDownRightX = chartArea.right - ds.upDownBlockWidth;
+            ds.upDownLeftX = chartArea.x;
+            ds.upDownY = chartArea.top;
+            ds.upDownBlockPerDataHeight = 25;
+        };
+
         ds.drawBackground = function (ctx) {
             log("drawBackground");
             var chart = this;
@@ -23,8 +35,8 @@ var DrawStyle = {
             ctx.stroke();
             ctx.fillStyle = "white";
             ctx.textBaseline = "bottom";
-            ctx.font = "18px "+DrawStyle.FONT_FAMILY;
-            ctx.fillText(runChart.dataDriven.source.name, ctx.canvas.width/2, chart.area.top-5);
+            ctx.font = "18px " + DrawStyle.FONT_FAMILY;
+            ctx.fillText(runChart.dataDriven.source.name, ctx.canvas.width / 2, chart.area.top - 5);
             ctx.restore();
         };
 
@@ -32,39 +44,41 @@ var DrawStyle = {
             //mouseCtx
             var chartMouse = runChart.chartMouse;
             var periodAxis = runChart.periodAxis;
-            if (chartMouse.inAxisArea) {
-                if (chartMouse.dragging) {
-                    //var newStartIndex = -1;
-                    //if (mouse.x > mouse.lastX && periodAxis.endIndex < runChart.dataDriven.count - 1) {
-                    //    newStartIndex = periodAxis.startIndex + 1;
-                    //} else if (mouse.x < mouse.lastX && periodAxis.startIndex > 0) {
-                    //    newStartIndex = periodAxis.startIndex - 1;
-                    //}
-                    //if (newStartIndex != -1) {
-                    //    //this.clearLayer(ctx);
-                    //    runChart.changePeriodRange(newStartIndex);
-                    //}
-                } else {
-                    ds.mouseInfo(ctx);
-                }
-
-            }
-        };
-
-        ds.mouseInfo = function (ctx) {
-            var periodAxis = runChart.periodAxis;
-            var source = runChart.dataDriven.source;
-            var list = runChart.dataDriven.list;
-            //var data = list[periodAxis.startIndex + runChart.mouse.index];
             var chartArea = runChart.area;
+            //var data = runChart.dataDriven.list[chartMouse.index];
+            //inAxisArea== true
+            //index!=-1
 
-            mouseGuideWires();
+            if (chartMouse.dragging) {
+            } else {
+                mouseGuideWires();
+                upDownBlock();
+            }
 
             function mouseGuideWires() {
                 ctx.save();
-                ctx.strokeStyle = "gray";
+                ctx.strokeStyle = DrawStyle.GUIDE_WIRE_COLOR;
                 ctx.drawHorizontalLine(chartArea.x, runChart.chartMouse.mouse.y, chartArea.right);
                 ctx.drawVerticalLine(runChart.chartMouse.mouse.x, chartArea.top, chartArea.y);
+                ctx.restore();
+            }
+
+            function upDownBlock() {
+                ctx.save();
+                var showListLength = runChart.showList.length;
+                var x = (chartMouse.mouse.x >= runChart.area.middle) ? ds.upDownRightX : ds.upDownLeftX;
+                var dataY = runChart.area.top;
+                var blockHeight = ds.upDownBlockPerDataHeight * showListLength;
+                ctx.fillStyle = DrawStyle.UP_DOWN_BLOCK_BACKGROUND_COLOR;
+                ctx.fillRect(x, ds.upDownY, ds.upDownBlockWidth, blockHeight);
+
+                ctx.textBaseline = "top";
+                ctx.fillStyle = "blue";
+                ctx.font = "16px " + DrawStyle.FONT_FAMILY;
+                for (var i = 0; i < showListLength; i++) {
+                    ctx.fillText(runChart.showList[i], x, dataY);
+                    dataY += ds.upDownBlockPerDataHeight;
+                }
                 ctx.restore();
             }
         };
@@ -144,8 +158,8 @@ var DrawStyle = {
                     startX = data.x - contentFixWidth;
                     endX = data.x + contentFixWidth;
                     ctx.moveTo(startX, valueAxis.y);
-                    ctx.lineTo(startX, data[valueAxis.column + "Y"]+1);
-                    ctx.lineTo(endX, data[valueAxis.column + "Y"]+1);
+                    ctx.lineTo(startX, data[valueAxis.column + "Y"] + 1);
+                    ctx.lineTo(endX, data[valueAxis.column + "Y"] + 1);
                     ctx.lineTo(endX, valueAxis.y);
                 }
                 ctx.fill();
@@ -157,8 +171,8 @@ var DrawStyle = {
                     startX = data.x + contentFixWidth;
                     endX = data.x + borderFixWidth;
                     ctx.moveTo(startX, valueAxis.y);
-                    ctx.lineTo(startX, data[valueAxis.column + "Y"]+1);
-                    ctx.lineTo(endX, data[valueAxis.column + "Y"]+1);
+                    ctx.lineTo(startX, data[valueAxis.column + "Y"] + 1);
+                    ctx.lineTo(endX, data[valueAxis.column + "Y"] + 1);
                     ctx.lineTo(endX, valueAxis.y);
                 }
                 ctx.fill();
@@ -259,6 +273,8 @@ var DrawStyle = {
             }
             return ticks;
         };
+
+        ds.init();
         return ds;
     }
 };

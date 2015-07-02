@@ -34,11 +34,27 @@ var BrowserInfo = {
 };
 
 var WebSocketManager = {
+    STATUS_CODE:{
+        "1000":"1000:Normal Closure",
+        "1001":"1001:Going Away",
+        "1002":"1002:Protocol error",
+        "1003":"1003:Unsupported Data",
+        "1004":"1004:---Reserved----",
+        "1005":"1005:No Status Rcvd",
+        "1006":"1006:Abnormal Closure",
+        "1007":"1007:Invalid frame payload data",
+        "1008":"1008:Policy Violation",
+        "1009":"1009:Message Too Big",
+        "1010":"1010:Mandatory Ext.",
+        "1011":"1011:Internal Server Error",
+        "1015":"1015:TLS handshake"
+    },
     createNew: function (host, name) {
         var wsm = {};
         wsm.host = host;
         wsm.name = name;
         wsm.websocket = undefined;
+        wsm.closeCode = undefined;
         wsm.connect = function (host) {
             if (typeof(wsm.host) != "undefined") {
                 try {
@@ -56,12 +72,18 @@ var WebSocketManager = {
             }
         };
 
+        wsm.closeMsg = function () {
+            return name+" WebSocket close:"+WebSocketManager.STATUS_CODE[wsm.closeCode];
+        };
+
         wsm.onOpen = function (evt) {
             wsm.addLog("onOpen");
             wsm.dispatchState();//連線成功(readyState=1)
         };
 
         wsm.onClose = function (evt) {
+            wsm.closeCode = evt.code;
+            wsm.closeReason = evt.reason;
             wsm.dispatchState();//連線已關閉(readyState=3)
             wsm.addLog("close code=" + evt.code + ",reason=" + evt.reason);
         };

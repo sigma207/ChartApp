@@ -6,7 +6,7 @@ FutureColumn.prototype.INT_TYPE = "int";
 FutureColumn.prototype.FLOAT_TYPE = "float";
 var config = {
     quoteWsUrl: "ws://ctvdemogw.ja178.com:10890/websocket",
-    kChartWsUrl: "ws://ctvdemogw.ja178.com:10891/websocket",
+    chartWsUrl: "ws://ctvdemogw.ja178.com:10891/websocket",
     kChartMin1: "min1",
     getBoardRequest: function (code, mid) {
         return '{"srv":"QUOTE","tr":"5003","tp":"r","zip":"0","encrypt":"0","mid":' + mid + ',"c":{"es":"G|' + code + '"}}';
@@ -68,7 +68,7 @@ var config = {
                     property = config.kChartProperties[j];
                     obj[property] = row[j];
                 }
-                tickData = new TickData(obj.code, obj.date, obj.time, obj.open, obj.high, obj.low, obj.close, obj.volume);
+                tickData = new MinuteTick(obj.code, obj.date, obj.time, obj.open, obj.high, obj.low, obj.close, obj.volume);
                 if (tickData.volume > boardObj.volumeMax) {
                     boardObj.volumeMax = tickData.volume;
                 }
@@ -79,7 +79,7 @@ var config = {
         log(boardObj.kChartDataList);
         log("maxVolume=%s", boardObj.volumeMax);
     },
-    calculateTickData: function (c, boardObj, useList) {
+    calculateSecondTickData: function (c, boardObj, useList) {
         //useList = [];
         var list = c.split("\r\n");
         var listCount = list.length;
@@ -96,18 +96,18 @@ var config = {
                     property = config.quoteDetailProperties[j];
                     obj[property] = row[j];
                 }
-                data = new QuoteDetail(obj.code, obj.date, obj.time, obj.last, obj.volume, obj.totalVolume, obj.index, obj.last - boardObj.preClose);
+                data = new SecondTick(obj.code, obj.date, obj.time, obj.last, obj.volume, obj.totalVolume, obj.index, obj.last - boardObj.preClose);
                 useList.push(data);
             }
         }
     },
     calculateQuoteDetailsData: function (c, boardObj) {
         boardObj.quoteIndexTickList = [];
-        config.calculateTickData(c, boardObj, boardObj.quoteIndexTickList);
+        config.calculateSecondTickData(c, boardObj, boardObj.quoteIndexTickList);
     },
     calculateQuoteMinuteTickData: function (c, boardObj) {
         boardObj.quoteMinuteTickList = [];
-        config.calculateTickData(c, boardObj, boardObj.quoteMinuteTickList);
+        config.calculateSecondTickData(c, boardObj, boardObj.quoteMinuteTickList);
     },
     boardDataFormat: function (columnMap, data) {
         var obj = {};
@@ -165,14 +165,14 @@ var config = {
         new Future("CLCC", "輕油期", 0.4, "060000", "040000"),
         new Future("GCCC", "黃金期", 0.31, "060000", "040000"),
         new Future("HSICC", "恆生期", 2.46, "091500", "161500"),
-        //new Future("IFCC", "滬深期", 0.26),
-        new Future("NKCC", "日經期", 0.26, "074500", "134500"),
+        new Future("IFCC", "滬深期", 0.26, "091500", "151500"),
+        new Future("NKCC", "日經期", 0.26, "074500", "143000"),
         new Future("NQCC", "那斯達", 0.26, "060000", "040000"),
-        //new Future("SICC", "白銀期", 1.22),
+        new Future("SICC", "白銀期", 1.22, "060000", "040000"),
         new Future("TECC", "電子期", 1.13, "084500", "134500"),
         new Future("TFCC", "金融期", 1.74, "084500", "134500"),
         new Future("TWCC", "摩台期", 1.2, "084500", "134500"),
-        //new Future("TWICC", "加權指", 1.22),
+        new Future("TWICC", "加權指", 1.22, "090000", "133000"),
         new Future("TXCC", "台指期", 1.06, "084500", "134500"),
         new Future("YMCC", "道瓊期", 0.25, "060000", "050000")
     ],
@@ -264,7 +264,7 @@ function Future(code, name, limitPercentage, startTime, endTime) {
     this.endTime = endTime;
 }
 //kChartProperties: ["code", "date", "time", "open", "high", "low", "close", "volume"],
-function TickData(code, date, time, open, high, low, close, volume) {
+function MinuteTick(code, date, time, open, high, low, close, volume) {
     this.code = code;
     this.date = date;
     this.time = time;
@@ -275,7 +275,7 @@ function TickData(code, date, time, open, high, low, close, volume) {
     this.volume = parseInt(volume);
 }
 
-function QuoteDetail(code, date, time, last, volume, totalVolume, index, upDown) {
+function SecondTick(code, date, time, last, volume, totalVolume, index, upDown) {
     this.code = code;
     this.date = date;
     this.time = time;

@@ -6,11 +6,11 @@ var Client = {
         var client = {};
         client.futureGoodsMap = {};
         client.quoteWsm = WebSocketManager.createNew(config.quoteWsUrl, "quote");
-        client.kChartWsm = WebSocketManager.createNew(config.kChartWsUrl, "kChart");
+        client.chartWsm = WebSocketManager.createNew(config.chartWsUrl, "kChart");
         client.columnMap = {};
-        client.quoteDetailsTable = undefined;
-        client.quoteDetailsUpDownColumn = undefined;
-        client.quoteDetailsLastColumn = undefined;
+        client.quoteSecondTickTable = undefined;
+        client.quoteSecondTickUpDownColumn = undefined;
+        client.quoteSecondTickLastColumn = undefined;
         client.canvasTable = undefined;
         client.futureDataManager = undefined;
         client.quoteDetailDataManager = undefined;
@@ -19,8 +19,8 @@ var Client = {
         client.futureDataLoaded = 0;
         client.futureDataList = [];
         client.runChartCode = "";
-        //client.testPushData = true;
-        client.testPushData = false;
+        client.testPushData = true;
+        //client.testPushData = false;
 
         client.init = function () {
             var i;
@@ -38,9 +38,9 @@ var Client = {
                 bg.futureTelegram.setWebSocketManager(client.quoteWsm);
                 bg.futureRegisterTelegram.setWebSocketManager(client.quoteWsm);
                 bg.futureUnRegisterTelegram.setWebSocketManager(client.quoteWsm);
-                bg.kChartTelegram.setWebSocketManager(client.kChartWsm);
-                bg.quoteIndexTickTelegram.setWebSocketManager(client.kChartWsm);
-                bg.quoteMinuteTickTelegram.setWebSocketManager(client.kChartWsm);
+                bg.kChartTelegram.setWebSocketManager(client.chartWsm);
+                bg.quoteIndexTickTelegram.setWebSocketManager(client.chartWsm);
+                bg.quoteMinuteTickTelegram.setWebSocketManager(client.chartWsm);
                 bg.futureTelegram.setRequest(config.getBoardRequest(bg.code, bg.boardMid));
                 bg.futureRegisterTelegram.setRequest(config.getBoardRegisterRequest(bg.code, bg.boardMid));
                 bg.futureUnRegisterTelegram.setRequest(config.getBoardUnRegisterRequest(bg.code, bg.boardMid));
@@ -69,30 +69,30 @@ var Client = {
         };
 
         client.initQuoteDetailsTable = function () {
-            client.quoteDetailsTable = CanvasTable.createNew(document.getElementById("quoteDetailsCanvas"));
-            client.quoteDetailsTable.updateTableRowHeight(15);
-            client.quoteDetailsTable.sortable = false;
-            client.quoteDetailsTable.addColumn(CanvasColumn.createNew("time", "時間", {textFillStyle: QuoteDetailStyle.DEFAULT_COLOR}));
-            client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("volume", "單量", {
+            client.quoteSecondTickTable = CanvasTable.createNew(document.getElementById("quoteSecondTickCanvas"));
+            client.quoteSecondTickTable.updateTableRowHeight(15);
+            client.quoteSecondTickTable.sortable = false;
+            client.quoteSecondTickTable.addColumn(CanvasColumn.createNew("time", "時間", {textFillStyle: QuoteDetailStyle.DEFAULT_COLOR}));
+            client.quoteSecondTickTable.addColumn(CanvasNumberColumn.createNew("volume", "單量", {
                 decimal: 0,
                 textFillStyle: QuoteDetailStyle.DEFAULT_COLOR
             }));
-            client.quoteDetailsUpDownColumn = client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("upDown", "漲跌", {
+            client.quoteSecondTickUpDownColumn = client.quoteSecondTickTable.addColumn(CanvasNumberColumn.createNew("upDown", "漲跌", {
                 decimal: 0,
                 textFillStyleFunction: QuoteDetailStyle.upDownColor
             }));
-            client.quoteDetailsLastColumn = client.quoteDetailsTable.addColumn(CanvasNumberColumn.createNew("last", "成交價", {
+            client.quoteSecondTickLastColumn = client.quoteSecondTickTable.addColumn(CanvasNumberColumn.createNew("last", "成交價", {
                 decimal: 0,
                 textFillStyleFunction: QuoteDetailStyle.upDownColor
             }));
-            client.quoteDetailsTable.addLayer();
-            client.quoteDetailDataManager.addRenderer(client.quoteDetailsTable);
+            client.quoteSecondTickTable.addLayer();
+            client.quoteDetailDataManager.addRenderer(client.quoteSecondTickTable);
 
-            var quoteDetailStyle = QuoteDetailStyle.createNew(client.quoteDetailsTable);
-            client.quoteDetailsTable.renderHeadRowBackground = quoteDetailStyle.headBackground;
-            client.quoteDetailsTable.renderBodyRowBackground = quoteDetailStyle.bodyRowBackground;
-            client.quoteDetailsTable.setColumnHeadContentRender(quoteDetailStyle.headContent);
-            client.quoteDetailsTable.setColumnCellContentRender(quoteDetailStyle.cellContent);
+            var quoteDetailStyle = QuoteDetailStyle.createNew(client.quoteSecondTickTable);
+            client.quoteSecondTickTable.renderHeadRowBackground = quoteDetailStyle.headBackground;
+            client.quoteSecondTickTable.renderBodyRowBackground = quoteDetailStyle.bodyRowBackground;
+            client.quoteSecondTickTable.setColumnHeadContentRender(quoteDetailStyle.headContent);
+            client.quoteSecondTickTable.setColumnCellContentRender(quoteDetailStyle.cellContent);
         };
 
         client.initCanvasTable = function () {
@@ -160,10 +160,10 @@ var Client = {
         client.connect = function () {
             client.quoteWsm.onState(client.onFutureState);
             client.quoteWsm.onData(client.onFutureData);
-            client.kChartWsm.onState(client.onKChartState);
-            client.kChartWsm.onData(client.onKChartData);
+            client.chartWsm.onState(client.onChartState);
+            client.chartWsm.onData(client.onChartData);
 
-            client.kChartWsm.connect();
+            client.chartWsm.connect();
             client.quoteWsm.connect();
         };
 
@@ -176,7 +176,7 @@ var Client = {
             }
             //client.canvasTable.stop();
             client.quoteWsm.close();
-            client.kChartWsm.close();
+            client.chartWsm.close();
         };
 
         client.onFutureState = function (evt, readyState) {
@@ -188,10 +188,10 @@ var Client = {
             }
         };
 
-        client.onKChartState = function (evt, readyState) {
-            log("kChart state=%s", readyState);
+        client.onChartState = function (evt, readyState) {
+            log("chart state=%s", readyState);
             if (readyState==3){
-                alert( client.kChartWsm.closeMsg());
+                alert( client.chartWsm.closeMsg());
             }
         };
 
@@ -204,12 +204,17 @@ var Client = {
                 obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
                 bg = client.futureGoodsMap[obj.code];//with out mid
                 bg.boardPushData = data;
-                //log(obj);
                 if (client.runChartCode == bg.code) {
-                    bg.updateTick(obj);
+                    bg.updateMinuteTick(obj);
                     client.runChartManager.refresh();
-                    bg.addQuoteDetail(obj);
-                    client.quoteDetailsTable.updateDataSize();
+                    var secondTick = bg.addQuoteSecondTick(obj);
+                    client.quoteSecondTickTable.updateDataSize();
+                    if(typeof client.runChartManager.chart.periodAxis.currentMouseHangList !== typeof undefined){
+                        var currentMouseData = client.runChartManager.chart.getCurrentMouseData();
+                        if(secondTick.time.substr(0,5)==currentMouseData.time.substr(0,5)){
+                            client.runChartManager.chart.periodAxis.currentMouseHangList.unshift(secondTick);
+                        }
+                    }
                 }
                 bg.updateBoardObj(obj);
                 //log(client.futureDataList.indexOf(bg.boardObj));
@@ -221,7 +226,7 @@ var Client = {
                     bg = client.getFutureGoodsByMid(temp.mid);
                     bg.setBoardObj(obj);
                     bg.futureTelegram.setResponse(data, temp);
-                    log(obj);
+                    //log(obj);
                     //if(error)//錯誤還沒處理
                     client.addFutureData(bg.boardObj);
                 } else if (temp.tr == "5001") {
@@ -232,32 +237,31 @@ var Client = {
             }
         };
 
-        client.onKChartData = function (evt, data) {
-            log("onKChartData");
+        client.onChartData = function (evt, data) {
+            log("onChartData");
             var temp = JSON.parse(data);
             if (temp.tp == "s") {
-                if (temp.tr == "1002") {
-                    var bg = client.getFutureGoodsByMid(temp.mid);
-                    bg.kChartTelegram.setResponse(data, temp);
-                    if (temp.error == "1") {
-                        var c = JSON.parse(temp.c);
-                        if (typeof c !== typeof undefined && c.hasOwnProperty("ec")) {
-                            alert(c.ec);
+                var bg = client.getFutureGoodsByMid(temp.mid);
+                if (temp.error == "1") {
+                    var c = JSON.parse(temp.c);
+                    if (typeof c !== typeof undefined && c.hasOwnProperty("ec")) {
+                        if(c.ec=="0001"){
+                            alert(bg.name+" temp.tr="+temp.tr+"error:此商品無資料");
+                        }else{
+                            alert("temp.tr="+temp.tr+"error code="+e.ec);
                         }
-                    } else {
-                        config.unZip(temp, client.onKChartDataLoaded);
                     }
-                } else if (temp.tr == "1012") {
-                    var bg = client.getFutureGoodsByMid(temp.mid);
-                    bg.quoteIndexTickTelegram.setResponse(data, temp);
-                    config.unZip(temp, client.onQuoteDetailsLoaded);
-                    log(temp);
-                } else if( temp.tr="1001"){
-                    //quoteMinuteTickTelegram
-                    var bg = client.getFutureGoodsByMid(temp.mid);
-                    bg.quoteMinuteTickTelegram.setResponse(data, temp);
-                    config.unZip(temp, client.onQuoteMinuteTickLoaded);
-                    log(temp);
+                }else{
+                    if (temp.tr == "1002") {
+                        bg.kChartTelegram.setResponse(data, temp);
+                        config.unZip(temp, client.onKChartDataLoaded);
+                    } else if (temp.tr == "1012") {
+                        bg.quoteIndexTickTelegram.setResponse(data, temp);
+                        config.unZip(temp, client.onQuoteDetailsLoaded);
+                    } else if( temp.tr="1001"){
+                        bg.quoteMinuteTickTelegram.setResponse(data, temp);
+                        config.unZip(temp, client.onQuoteMinuteTickLoaded);
+                    }
                 }
             }
         };
@@ -280,9 +284,11 @@ var Client = {
             client.requestQuoteIndexTick(code);
         };
 
-        client.onBoardRowClick = function (e, rowData) {
-            log("rowData.code=%s", rowData.code);
-            client.futureDetails(rowData.code);
+        client.onBoardRowClick = function (e, id,rowData) {
+            if(id=="tableCanvas"){
+                log("rowData.code=%s", rowData.code);
+                client.futureDetails(rowData.code);
+            }
         };
 
         client.requestFuture = function () {
@@ -304,24 +310,18 @@ var Client = {
         };
 
         client.requestKChart = function (code) {
-            log("requestKChart:%s", code);
             var bg = client.futureGoodsMap[code];
-
             bg.kChartTelegram.setRequest(config.getKChartRequest(bg.code, bg.boardMid, bg.boardObj.quoteDate, config.kChartMin1));
             bg.kChartTelegram.sendRequest();
         };
 
         client.requestQuoteMinuteTick = function (data) {
-
             var code = data.code.replace("G|", "");
             var bg = client.futureGoodsMap[code];
             var startTime = moment(bg.boardObj.quoteDate + data.time+":00", "YYYYMMDDHHmmss");
             var endTime = moment(bg.boardObj.quoteDate + data.time+":00", "YYYYMMDDHHmmss");
-
             endTime.add(1, "minutes");
-
-            log("startTime=%s,endTime=%s",startTime.format("HH:mm:ss"),endTime.format("HH:mm:ss"));
-
+            //log("startTime=%s,endTime=%s",startTime.format("HH:mm:ss"),endTime.format("HH:mm:ss"));
             bg.quoteMinuteTickTelegram.setRequest(config.getQuoteMinuteTickRequest(bg.code,bg.boardMid,bg.boardObj.quoteDate,startTime.format("HH:mm:ss"),endTime.format("HH:mm:ss")));
             bg.quoteMinuteTickTelegram.sendRequest();
         };
@@ -343,22 +343,20 @@ var Client = {
             var bg = client.getFutureGoodsByMid(temp.mid);
 
             config.calculateQuoteDetailsData(temp.c, bg.boardObj);
-            client.quoteDetailsUpDownColumn.updateDecimal(bg.boardObj.scale);
-            client.quoteDetailsLastColumn.updateDecimal(bg.boardObj.scale);
+            client.quoteSecondTickUpDownColumn.updateDecimal(bg.boardObj.scale);
+            client.quoteSecondTickLastColumn.updateDecimal(bg.boardObj.scale);
             client.quoteDetailDataManager.setDataSource(bg.boardObj.quoteIndexTickList);
         };
 
         client.onQuoteMinuteTickLoaded = function (temp) {
-            var bg = client.getFutureGoodsByMid(temp.mid);
-
-            config.calculateQuoteMinuteTickData(temp.c, bg.boardObj);
-
-            client.runChartManager.chart.showList = [];
-            var list = bg.boardObj.quoteMinuteTickList;
-            for(var i=0;i<list.length;i++){
-                client.runChartManager.chart.showList.push(list[i].last);
+            if(typeof client.runChartManager.chart.periodAxis.currentMouseHangList !== typeof undefined){
+                var bg = client.getFutureGoodsByMid(temp.mid);
+                config.calculateQuoteMinuteTickData(temp.c, bg.boardObj);
+                var list = bg.boardObj.quoteMinuteTickList;
+                for(var i=0;i<list.length;i++){
+                    client.runChartManager.chart.periodAxis.currentMouseHangList.push(list[i]);
+                }
             }
-            //client.runChartManager.chart.showList.concat(bg.boardObj.quoteMinuteTickList)
         };
 
         client.getFutureGoodsByMid = function (mid) {
@@ -459,6 +457,7 @@ function Telegram() {
     };
 
     this.sendRequest = function () {
+        log("Telegram sendRequest:"+ t.requestText);
         t.wsm.send(t.requestText);
     };
 
@@ -512,7 +511,7 @@ function FutureGoods(future, i) {
         //log("upDown=%s,upDownPercentage=%s",data.upDown,data.upDownPercentage);
     };
 
-    this.updateTick = function (obj) {
+    this.updateMinuteTick = function (obj) {
         var list = bg.boardObj.kChartDataList;
         var tickData = list[list.length - 1];
         if (obj.volume > bg.boardObj.volumeMax) {
@@ -525,16 +524,17 @@ function FutureGoods(future, i) {
             tickData.volume += obj.volume;
             log("updateTick close=%s,volume=%s,time=%s", tickData.close, tickData.volume, obj.tickTime);
         } else {
-            var newTickData = new TickData(obj.code, obj.quoteDate, obj.tickTime.substr(0, 5), obj.open, obj.high, obj.low, obj.last, obj.volume);
+            var newTickData = new MinuteTick(obj.code, obj.quoteDate, obj.tickTime.substr(0, 5), obj.open, obj.high, obj.low, obj.last, obj.volume);
             list.push(newTickData);
             log("addTick close=%s,volume=%s,time=%s", newTickData.close, newTickData.volume, newTickData.time);
         }
     };
 
-    this.addQuoteDetail = function (obj) {
-        var quoteDetails = new QuoteDetail(obj.code, obj.quoteDate, obj.tickTime, obj.last, obj.volume, obj.totalVolume, obj.quoteIndex, obj.last - bg.boardObj.preClose);
+    this.addQuoteSecondTick = function (obj) {
+        var secondTick = new SecondTick(obj.code, obj.quoteDate, obj.tickTime, obj.last, obj.volume, obj.totalVolume, obj.quoteIndex, obj.last - bg.boardObj.preClose);
         bg.boardObj.quoteIndexTickList.pop();
-        bg.boardObj.quoteIndexTickList.unshift(quoteDetails);
+        bg.boardObj.quoteIndexTickList.unshift(secondTick);
+        return secondTick;
     };
 
     this.calculate = function () {

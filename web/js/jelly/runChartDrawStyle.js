@@ -8,7 +8,7 @@ var DrawStyle = {
     VOLUME_TEXT_COLOR: "#00FFF7",
     PRE_CLOSE_COLOR: "#FF1FC7",
     GUIDE_WIRE_COLOR: "gray",
-    UP_DOWN_BLOCK_BACKGROUND_COLOR: "rgba(176,176,176,0.5)",
+    UP_DOWN_BLOCK_BACKGROUND_COLOR: "rgba(176,170,104,0.5)",
     RISE_COLOR: "#F20000",
     FALL_COLOR: "#00EB00",
     createNew: function (runChart) {
@@ -17,10 +17,12 @@ var DrawStyle = {
         ds.init = function () {
             var chartArea = runChart.area;
             ds.upDownBlockWidth = 50;
-            ds.upDownRightX = chartArea.right - ds.upDownBlockWidth;
+            ds.upDownRightX = chartArea.right;
             ds.upDownLeftX = chartArea.x;
             ds.upDownY = chartArea.top;
-            ds.upDownBlockPerDataHeight = 25;
+            ds.upDonwTextStartY = ds.upDownY + 5;
+            ds.upDownLeftPadding = 5;
+            ds.upDownBlockPerDataHeight = 20;
         };
 
         ds.drawBackground = function (ctx) {
@@ -64,22 +66,96 @@ var DrawStyle = {
             }
 
             function upDownBlock() {
-                ctx.save();
-                var showListLength = runChart.showList.length;
-                var x = (chartMouse.mouse.x >= runChart.area.middle) ? ds.upDownRightX : ds.upDownLeftX;
-                var dataY = runChart.area.top;
-                var blockHeight = ds.upDownBlockPerDataHeight * showListLength;
-                ctx.fillStyle = DrawStyle.UP_DOWN_BLOCK_BACKGROUND_COLOR;
-                ctx.fillRect(x, ds.upDownY, ds.upDownBlockWidth, blockHeight);
 
-                ctx.textBaseline = "top";
-                ctx.fillStyle = "blue";
-                ctx.font = "16px " + DrawStyle.FONT_FAMILY;
-                for (var i = 0; i < showListLength; i++) {
-                    ctx.fillText(runChart.showList[i], x, dataY);
-                    dataY += ds.upDownBlockPerDataHeight;
+                var showListLength = 0;
+                if (typeof periodAxis.currentMouseHangList !== typeof undefined) {
+                    showListLength = periodAxis.currentMouseHangList.length;
+                } else if (typeof periodAxis.currentMouseData !== typeof undefined) {
+                    showListLength = 4;
                 }
-                ctx.restore();
+
+                if (showListLength > 0) {
+                    var source = runChart.dataDriven.source;
+                    var valueFormat = JsonTool.numeralFormat(source.scale);
+                    var formLeft = (chartMouse.mouse.x >= runChart.area.middle);
+
+                    var dataY = ds.upDonwTextStartY;
+                    var maxWidth = 0, i;
+                    var text = "", data;
+                    ctx.save();
+                    ctx.font = "14px " + DrawStyle.FONT_FAMILY;
+                    var blockHeight = 0;
+                    var textList = [];
+                    if (typeof periodAxis.currentMouseHangList !== typeof undefined) {
+
+                        for (i = 0; i < showListLength; i++) {
+                            data = runChart.periodAxis.currentMouseHangList[i];
+
+                            text = numeral(data.last).format(valueFormat) + " - " + data.volume + " ";
+                            maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
+                            textList.push({text: text, y: dataY});
+                            dataY += ds.upDownBlockPerDataHeight;
+                            blockHeight += ds.upDownBlockPerDataHeight;
+
+                            text = data.time;
+                            maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
+                            textList.push({text: text, y: dataY});
+                            dataY += ds.upDownBlockPerDataHeight;
+
+                            blockHeight += ds.upDownBlockPerDataHeight;
+
+                            if(blockHeight+(ds.upDownBlockPerDataHeight*2)>runChart.area.height){
+                                break;
+                            }
+                        }
+                    } else if (typeof periodAxis.currentMouseData !== typeof undefined) {
+                        data = periodAxis.currentMouseData;
+                        text = numeral(data.high).format(valueFormat)+" - "+data.volume + " ";
+                        maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
+                        textList.push({text: text, y: dataY});
+                        dataY += ds.upDownBlockPerDataHeight;
+
+                        text = data.time;
+                        maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
+                        textList.push({text: text, y: dataY});
+                        dataY += ds.upDownBlockPerDataHeight;
+
+                        text = numeral(data.low).format(valueFormat)+" - "+data.volume + " ";
+                        maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
+                        textList.push({text: text, y: dataY});
+                        dataY += ds.upDownBlockPerDataHeight;
+
+                        text = data.time;
+                        maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
+                        textList.push({text: text, y: dataY});
+                        dataY += ds.upDownBlockPerDataHeight;
+
+                        blockHeight = ds.upDownBlockPerDataHeight*showListLength;
+                    }
+
+                    var x = (formLeft) ? ds.upDownLeftX : ds.upDownRightX - maxWidth;
+                    ctx.fillStyle = DrawStyle.UP_DOWN_BLOCK_BACKGROUND_COLOR;
+
+                    if (formLeft) {
+                        ctx.fillRect(x-ds.upDownLeftPadding, ds.upDownY, maxWidth+ds.upDownLeftPadding, blockHeight);
+                    } else {
+                        ctx.fillRect(x-ds.upDownLeftPadding, ds.upDownY, maxWidth+ds.upDownLeftPadding, blockHeight);
+                    }
+
+                    ctx.textBaseline = "top";
+                    ctx.fillStyle = "white";
+
+                    for (i = 0; i < textList.length; i++) {
+                        if(i%2==0){
+                            ctx.font = "14px " + DrawStyle.FONT_FAMILY;
+                        }else{
+                            ctx.font = "12px " + DrawStyle.FONT_FAMILY;
+                        }
+                        ctx.fillText(textList[i].text, x, textList[i].y);
+                    }
+
+                    ctx.restore();
+                }
             }
         };
 
@@ -272,6 +348,10 @@ var DrawStyle = {
                 ticks.addTick(axis.valueMax, DrawStyle.VOLUME_TEXT_COLOR);
             }
             return ticks;
+        };
+
+        ds.getMaxWidth = function (ctx, text, maxWidth) {
+            return Math.max(maxWidth, ctx.measureText(text).width);
         };
 
         ds.init();

@@ -754,12 +754,61 @@ var CanvasTable = {
 };
 
 var CanvasTableMouse = {
+    tableMouseList: [],
+    tableMouseSize: 0,
+    lastX: 0,
+    lastY: 0,
+    add: function (tableMouse) {
+        CanvasTableMouse.tableMouseList.push(tableMouse);
+        CanvasTableMouse.tableMouseSize++;
+        if (CanvasTableMouse.tableMouseSize == 1) {
+            CanvasTableMouse.init();
+        }
+    },
+    init: function () {
+        $(document).mousemove(CanvasTableMouse.onMouseMove);
+    },
+    /**
+     * 讓滑鼠就算移動到canvas外,也能保持table的scroll能繼續移動
+     * @param e
+     */
+    onMouseMove: function (e) {
+        var tm = undefined;
+        var temp = undefined;
+        var lastTemp = undefined;
+        for (var i = 0; i < CanvasTableMouse.tableMouseSize; i++) {
+            tm = CanvasTableMouse.tableMouseList[i];
+            var cc = $(tm.table.canvas);
+            if (tm.verticalScrollerDragging) {
+                //檢查有在canvas範圍外才捲動
+                if (e.clientX < cc.offset().left || e.clientX > cc.offset().left + parseFloat(cc.attr("width").replace("px", ""))) {
+                    temp = tm.mouse.windowToCanvas(e.clientX, e.clientY);
+                    lastTemp = tm.mouse.windowToCanvas(CanvasTableMouse.lastX, CanvasTableMouse.lastY);
+                    tm.verticalScroll(temp.y, lastTemp.y);
+                }
+                break;
+            } else if (tm.horizontalScrollerDragging) {
+                temp = tm.mouse.windowToCanvas(e.clientX, e.clientY);
+                //檢查有在canvas範圍外才捲動
+                if ( e.clientY < cc.offset().top ||  e.clientY > cc.offset().top + parseFloat(cc.attr("height").replace("px", ""))) {
+                    temp = tm.mouse.windowToCanvas(e.clientX, e.clientY);
+                    lastTemp = tm.mouse.windowToCanvas(CanvasTableMouse.lastX, CanvasTableMouse.lastY);
+                    tm.horizontalScroll(temp.x, lastTemp.x);
+                }
+                break;
+            }
+        }
+        CanvasTableMouse.lastX = e.clientX;
+        CanvasTableMouse.lastY = e.clientY;
+    },
     createNew: function (table, layer) {
         var tableMouse = {};
+        tableMouse.table = table;
         tableMouse.layer = layer;
         tableMouse.mouse = CanvasMouse.createNew(tableMouse.layer.canvas);
         tableMouse.verticalScrollerDragging = false;
         tableMouse.horizontalScrollerDragging = false;
+        CanvasTableMouse.add(tableMouse);
 
         tableMouse.reset = function () {
             tableMouse.mouseColumnIndex = -1;
@@ -767,20 +816,27 @@ var CanvasTableMouse = {
             tableMouse.mouseInHead = false;
         };
 
+        tableMouse.verticalScroll = function (y, lastY) {
+            if (y > lastY) {
+                table.addVerticalScrollY(y - lastY);
+            } else if (y < lastY) {
+                table.addVerticalScrollY(y - lastY);
+            }
+        };
+
+        tableMouse.horizontalScroll = function (x, lastX) {
+            if (x > lastX) {
+                table.addHorizontalScrollX(x - lastX);
+            } else if (x < lastX) {
+                table.addHorizontalScrollX(x - lastX);
+            }
+        };
+
         tableMouse.mouseMove = function () {
             if (tableMouse.verticalScrollerDragging) {
-
-                if (tableMouse.mouse.y > tableMouse.mouse.lastY) {
-                    table.addVerticalScrollY(tableMouse.mouse.y - tableMouse.mouse.lastY);
-                } else if (tableMouse.mouse.y < tableMouse.mouse.lastY) {
-                    table.addVerticalScrollY(tableMouse.mouse.y - tableMouse.mouse.lastY);
-                }
+                tableMouse.verticalScroll(tableMouse.mouse.y , tableMouse.mouse.lastY);
             } else if (tableMouse.horizontalScrollerDragging) {
-                if (tableMouse.mouse.x > tableMouse.mouse.lastX) {
-                    table.addHorizontalScrollX(tableMouse.mouse.x - tableMouse.mouse.lastX);
-                } else if (tableMouse.mouse.x < tableMouse.mouse.lastX) {
-                    table.addHorizontalScrollX(tableMouse.mouse.x - tableMouse.mouse.lastX);
-                }
+                tableMouse.horizontalScroll(tableMouse.mouse.x , tableMouse.mouse.lastX);
             } else {
                 tableMouse.onVerticalScroller = false;
                 tableMouse.aboveVerticalScroller = false;

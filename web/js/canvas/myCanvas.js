@@ -36,8 +36,6 @@ var LayerManager = {
         for (var i = 0; i < LayerManager.list.length; i++) {
             var cm = LayerManager.list[i];
             var parent = $(cm.baseLayer.canvas).parent();
-            //log("id=%s",cm.baseLayer.id);
-            //log("parent.width=%s,parent.height=%s",parent.css("width"),parent.css("height"));
             for (var j = 0; j < cm.layerList.length; j++) {
                 var c = $(cm.layerList[j].canvas);
                 c.attr("width", parent.css("width"));
@@ -61,14 +59,12 @@ var LayerManager = {
         cm.baseLayer = undefined;
         cm.resizeCall = undefined;
         cm.addBaseLayer = function (canvas) {
-            log("addBaseLayer canvas.id=%s", canvas.id);
             cm.baseLayer = CanvasLayer.createNew(canvas.id, canvas);
             var parent = $(cm.baseLayer.canvas).parent();
             var baseCanvas = $(cm.baseLayer.canvas);
             baseCanvas.css("position", "absolute");
             baseCanvas.attr("width", parent.css("width"));
             baseCanvas.attr("height", parent.css("height"));
-            //$(window).on("resize",cm.onParentResize);
             cm.layerList.push(cm.baseLayer);
         };
         cm.addLayer = function (id, opacity) {

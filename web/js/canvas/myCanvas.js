@@ -8,24 +8,67 @@ var CanvasLayer = {
         layer.id = id;
         layer.canvas = canvas;
         layer.ctx = canvas.getContext("2d");
+        layer.font = undefined;
         layer.clear = function () {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        };
+        layer.assignFont = function (font) {
+            layer.font = font;
+            layer.updateFont();
+        };
+        layer.updateFont = function () {
+            layer.ctx.font = layer.font;
         };
         return layer;
     }
 };
 
 var LayerManager = {
+    list: [],
+    timeId:undefined,
+    add: function (cm) {
+        LayerManager.list.push(cm);
+        if (LayerManager.list.length == 1) {
+            $(window).on("resize", LayerManager.onWindowResize);
+        }
+    },
+    resizeCanvas: function () {
+        for (var i = 0; i < LayerManager.list.length; i++) {
+            var cm = LayerManager.list[i];
+            var parent = $(cm.baseLayer.canvas).parent();
+            //log("id=%s",cm.baseLayer.id);
+            //log("parent.width=%s,parent.height=%s",parent.css("width"),parent.css("height"));
+            for (var j = 0; j < cm.layerList.length; j++) {
+                var c = $(cm.layerList[j].canvas);
+                c.attr("width", parent.css("width"));
+                c.attr("height", parent.css("height"));
+                cm.layerList[j].updateFont();
+            }
+            if (typeof cm.resizeCall !== typeof undefined) {
+                cm.resizeCall();
+            }
+        }
+    },
+    onWindowResize: function (e) {
+        if(typeof LayerManager.timeId !== typeof undefined){
+            clearTimeout(LayerManager.timeId);
+        }
+        LayerManager.timeId = setTimeout(LayerManager.resizeCanvas,500);
+    },
     createNew: function () {
         var cm = {};
         cm.layerList = [];
         cm.baseLayer = undefined;
+        cm.resizeCall = undefined;
         cm.addBaseLayer = function (canvas) {
+            log("addBaseLayer canvas.id=%s", canvas.id);
             cm.baseLayer = CanvasLayer.createNew(canvas.id, canvas);
             var parent = $(cm.baseLayer.canvas).parent();
-            $(cm.baseLayer.canvas).css("position", "absolute");
-            $(cm.baseLayer.canvas).attr("width", parent.css("width"));
-            $(cm.baseLayer.canvas).attr("height", parent.css("height"));
+            var baseCanvas = $(cm.baseLayer.canvas);
+            baseCanvas.css("position", "absolute");
+            baseCanvas.attr("width", parent.css("width"));
+            baseCanvas.attr("height", parent.css("height"));
+            //$(window).on("resize",cm.onParentResize);
             cm.layerList.push(cm.baseLayer);
         };
         cm.addLayer = function (id, opacity) {
@@ -64,6 +107,7 @@ var LayerManager = {
             cm.getLayer(index).clear();
         };
 
+        LayerManager.add(cm);
         return cm;
     }
 };
@@ -153,3 +197,36 @@ var CanvasMouse = {
         return mouse;
     }
 };
+
+var ChartLine = {
+    createNew: function (ctx, strokeStyle) {
+        var cl = {};
+        cl.lineList = [];
+
+        cl.addLine = function (moveToX, moveToY, lineToX, lineToY) {
+            cl.lineList.push({
+                moveToX: moveToX,
+                moveToY: moveToY,
+                lineToX: lineToX,
+                lineToY: lineToY
+            });
+        };
+
+        cl.draw = function () {
+            var count = cl.lineList.length;
+            var line = undefined;
+            ctx.strokeStyle = strokeStyle;
+            ctx.beginPath();
+            for (var i = 0; i < count; i++) {
+                line = cl.lineList[i];
+                //log("line.moveToX=%s, line.moveToX=%s",line.moveToX, line.moveToX);
+                ctx.moveTo(line.moveToX, line.moveToY);
+                ctx.lineTo(line.lineToX, line.lineToY);
+            }
+            ctx.stroke();
+        };
+
+        return cl;
+    }
+};
+

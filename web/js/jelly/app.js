@@ -203,7 +203,7 @@ var Client = {
                 //log("push data onFutureData");
                 obj = config.boardDataFormat(client.columnMap, JSON.parse(temp.c).data);
                 bg = client.futureGoodsMap[obj.code];//with out mid
-                bg.boardPushData = data;
+                bg.futureRegisterTelegram.setPush(data,obj);
                 if (client.runChartCode == bg.code) {
                     bg.updateMinuteTick(obj);
                     client.runChartManager.refresh();
@@ -400,8 +400,9 @@ var runChartManager = {
 
             var periodAxis = chart.createPeriodAxis("time", config.getKChartDataDataTime);
             periodAxis.createTimeTick();
-            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", area.x, area.y, volumeAxisHeight);
-            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale", area.x, volumeAxis.y - volumeAxis.height - spaceHeight, valueAxisHeight);
+            var volumeAxis = periodAxis.createValueAxis("volume", "volumeMin", "volumeMax", "scale", 25);
+            var emptyAxis = periodAxis.createEmptyAxisY(5);
+            var valueAxis = periodAxis.createValueAxis("close", "lowLimit", "highLimit", "scale",70);
             var mouse = chart.createMouse(chart.layerManager.getLayerById("mouseLayer"));
 
             chart.setDataDriven(dataDriven);
@@ -446,7 +447,8 @@ var runChartManager = {
     }
 };
 
-function Telegram() {
+function Telegram(describe) {
+    this.describe = describe;
     this.requestText = undefined;
     this.responseText = undefined;
     this.responseObj = undefined;
@@ -457,7 +459,7 @@ function Telegram() {
     };
 
     this.sendRequest = function () {
-        log("Telegram sendRequest:"+ t.requestText);
+        //log(describe+" sendRequest:"+ t.requestText);
         t.wsm.send(t.requestText);
     };
 
@@ -469,23 +471,29 @@ function Telegram() {
         t.responseText = text;
         t.responseObj = obj;
     };
+
+    this.setPush = function (text, obj) {
+        //log(describe+" setPush:"+ text);
+        t.pushText = text;
+        t.pushObj = obj;
+    }
 }
 
 function FutureGoods(future, i) {
     this.index = i;
     this.code = future.code;
     this.name = future.name;
+    this.telegramName = "["+this.name+"]";
     this.limitPercentage = future.limitPercentage;
     this.startTime = future.startTime;
     this.endTime = future.endTime;
     this.boardMid = "boardGoods" + i;
-    this.futureTelegram = new Telegram();
-    this.futureRegisterTelegram = new Telegram();
-    this.futureUnRegisterTelegram = new Telegram();
-    this.kChartTelegram = new Telegram();
-    this.quoteIndexTickTelegram = new Telegram();
-    this.quoteMinuteTickTelegram = new Telegram();
-    this.boardPushData = undefined;
+    this.futureTelegram = new Telegram( this.telegramName+"盤面");
+    this.futureRegisterTelegram = new Telegram(this.telegramName+"盤面註冊更新");
+    this.futureUnRegisterTelegram = new Telegram(this.telegramName+"盤面反註冊更新");
+    this.kChartTelegram = new Telegram(this.telegramName+"K線圖");
+    this.quoteIndexTickTelegram = new Telegram(this.telegramName+"交易明細");
+    this.quoteMinuteTickTelegram = new Telegram(this.telegramName+"分鐘明細");
     this.boardObj = undefined;
     var bg = this;
     this.setBoardObj = function (boardObj) {
@@ -522,17 +530,19 @@ function FutureGoods(future, i) {
             tickData.low = obj.low;
             tickData.close = obj.last;
             tickData.volume += obj.volume;
-            log("updateTick close=%s,volume=%s,time=%s", tickData.close, tickData.volume, obj.tickTime);
+            //log("updateTick close=%s,volume=%s,time=%s", tickData.close, tickData.volume, obj.tickTime);
         } else {
             var newTickData = new MinuteTick(obj.code, obj.quoteDate, obj.tickTime.substr(0, 5), obj.open, obj.high, obj.low, obj.last, obj.volume);
             list.push(newTickData);
-            log("addTick close=%s,volume=%s,time=%s", newTickData.close, newTickData.volume, newTickData.time);
+            //log("addTick close=%s,volume=%s,time=%s", newTickData.close, newTickData.volume, newTickData.time);
         }
     };
 
     this.addQuoteSecondTick = function (obj) {
         var secondTick = new SecondTick(obj.code, obj.quoteDate, obj.tickTime, obj.last, obj.volume, obj.totalVolume, obj.quoteIndex, obj.last - bg.boardObj.preClose);
-        bg.boardObj.quoteIndexTickList.pop();
+        if(bg.boardObj.quoteIndexTickList.length==100){
+            bg.boardObj.quoteIndexTickList.pop();
+        }
         bg.boardObj.quoteIndexTickList.unshift(secondTick);
         return secondTick;
     };

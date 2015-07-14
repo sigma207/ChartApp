@@ -20,6 +20,8 @@ var CanvasTable = {
         table.initLayer = false;
         table.animationId = undefined;
         table.sortable = true;
+        table.reCalculateContent = true;
+        table.reCalculateHeader = true;
         table.reRenderHeader = true;
         table.reRenderVerticalScroll = true;
         table.columns = [];
@@ -89,6 +91,7 @@ var CanvasTable = {
             column.index = table.columns.length;
             table.columns.push(column);
             table.columnSize++;
+            table.reCalculateHeader = true;
             return column;
         };
 
@@ -106,7 +109,8 @@ var CanvasTable = {
             }
             table.data = newData;
             table.updateDataSize();
-            table.calculateColumnsWidth();
+
+            //table.calculateColumnsWidth();
             //table.calculate();
             //table.animationId = requestAnimationFrame(table.render);
             table.start();
@@ -116,7 +120,8 @@ var CanvasTable = {
             var orgDataSize = table.dataSize;
             table.dataSize = table.data.length;
             if (orgDataSize != table.dataSize) {
-                table.reCalculcate = true;
+                table.reCalculateContent = true;
+                table.reRenderContent = false;
             } else {
                 table.reRenderContent = true;
             }
@@ -174,12 +179,16 @@ var CanvasTable = {
         };
 
         table.render = function () {
-            if (table.reCalculcate) {
+            if (table.reCalculateHeader) {
+                table.calculateColumnsWidth();
+                table.reCalculateHeader = false;
+            }
+            if (table.reCalculateContent) {
                 table.calculate();
-                table.reCalculcate = false;
+                table.reCalculateContent = false;
             }
             if (table.reRenderHeader) {
-                //logTime("reRenderHeader");
+                //log("reRenderHeader");
                 table.renderHeader();
                 table.renderContent();
                 if (table.lockColumnsWidth > 0) {
@@ -441,14 +450,14 @@ var CanvasTable = {
 
 
         table.calculate = function () {
-            logTime("calculate:%s", canvas.id);
+            //logTime("calculate:%s", canvas.id);
             table.calculateContent();
             if (table.columnHasChange) {
                 table.fillColumnsWidth();
             }
             table.calculateHorizontalScrollSize();
             table.calculateVerticalScrollSize();
-            logTimeEnd("calculate:%s", canvas.id);
+            //logTimeEnd("calculate:%s", canvas.id);
         };
 
         table.calculateContentHeight = function () {
@@ -500,7 +509,7 @@ var CanvasTable = {
             //var fillTotalWidth = table.columnsWidth - table.orgColumnsWidth;
             var fillTotalWidth = table.canUseContentWidth - table.orgColumnsWidth;
             if (fillTotalWidth > 0) {
-                log("fillTotalWidth=%s", fillTotalWidth);
+                //log("fillTotalWidth=%s", fillTotalWidth);
                 table.columnsWidth = 0;
                 var tempWidth = fillTotalWidth;
                 var avgFillWidth = tempWidth / table.columnSize;
@@ -518,7 +527,7 @@ var CanvasTable = {
                     x += column.width;
                     table.columnsWidth += column.width;
                 }
-                log("table.columnsWidth after fill=%s", table.columnsWidth);
+                //log("table.columnsWidth after fill=%s", table.columnsWidth);
                 return true;
             }
             return false;
@@ -671,7 +680,7 @@ var CanvasTable = {
             }
             table.columnsWidth = table.orgColumnsWidth;
             //log("table.columnsWidth=%s", table.columnsWidth);
-            table.reCalculcate = true;
+            table.reCalculateContent = true;
             table.reRenderHeader = true;
             table.columnHasChange = true;
             //logTimeEnd("table.calculateColumnWidth()");
@@ -731,8 +740,14 @@ var CanvasTable = {
             $(document).trigger("rowClick", [canvas.id, rowData]);
         };
 
+        table.resizeCall = function () {
+            table.reCalculateHeader = true;
+        };
+
         table.updateTableRowHeight(25);
         table.updateTableHeaderHeight(25);
+
+        table.layerManager.resizeCall = table.resizeCall;
 
         return table;
     }

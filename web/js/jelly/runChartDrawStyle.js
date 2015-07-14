@@ -110,7 +110,7 @@ var DrawStyle = {
                         }
                     } else if (typeof periodAxis.currentMouseData !== typeof undefined) {
                         data = periodAxis.currentMouseData;
-                        text = numeral(data.high).format(valueFormat)+" - "+data.volume + " ";
+                        text = numeral(data.high).format(valueFormat);
                         maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
                         textList.push({text: text, y: dataY});
                         dataY += ds.upDownBlockPerDataHeight;
@@ -120,7 +120,7 @@ var DrawStyle = {
                         textList.push({text: text, y: dataY});
                         dataY += ds.upDownBlockPerDataHeight;
 
-                        text = numeral(data.low).format(valueFormat)+" - "+data.volume + " ";
+                        text = numeral(data.low).format(valueFormat);
                         maxWidth = ds.getMaxWidth(ctx, text, maxWidth);
                         textList.push({text: text, y: dataY});
                         dataY += ds.upDownBlockPerDataHeight;
@@ -181,29 +181,28 @@ var DrawStyle = {
             var data, i;
             ctx.save();
             if (valueAxis.column == "close") {
+                var riseLine = ChartLine.createNew(ctx,DrawStyle.RISE_COLOR);
+                var fallLine = ChartLine.createNew(ctx,DrawStyle.FALL_COLOR);
                 var oldValue, newValue, x, y, oldX, oldY;
                 for (i = dataDriven.dataStartIndex; i <= dataDriven.dataEndIndex; i++) {
                     data = list[i];
                     newValue = data[valueAxis.column];
-                    //log(data.time);
                     x = data.x;
                     y = data[valueAxis.column + "Y"];
                     if (i == 0) {
                     } else {
                         if (newValue > oldValue) {
-                            ctx.strokeStyle = DrawStyle.RISE_COLOR;
+                            riseLine.addLine(oldX,oldY,x,y);
                         } else {
-                            ctx.strokeStyle = DrawStyle.FALL_COLOR;
+                            fallLine.addLine(oldX,oldY,x,y);
                         }
-                        ctx.beginPath();
-                        ctx.moveTo(oldX, oldY);
-                        ctx.lineTo(x, y);
-                        ctx.stroke();
                     }
                     oldX = x;
                     oldY = y;
                     oldValue = newValue;
                 }
+                riseLine.draw();
+                fallLine.draw();
                 //log("i=%s,time=%s,close=%s,volume=%s", i,data.time,data.close,data.volume);
             } else if (valueAxis.column == "volume") {
                 //#5f8cb6   #1f5b97 #2a3a4a
@@ -260,7 +259,6 @@ var DrawStyle = {
             var axis = this;
             ctx.save();
             ctx.fillStyle = DrawStyle.TICK_COLOR;
-            ctx.strokeStyle = DrawStyle.TICK_COLOR;
             ctx.lineWidth = DrawStyle.TICK_LINE_WIDTH;
             ctx.textAlign = "center";
             var y = runChart.area.y + 10;
@@ -268,14 +266,16 @@ var DrawStyle = {
             var valueAxis;
             var tickList = axis.timeTick.tickList;
             var valueAxisCount = axis.valueAxisList.length;
+            var tickLine = ChartLine.createNew(ctx,DrawStyle.TICK_COLOR);
             for (var i = axis.timeTick.tickStartIndex; i < axis.timeTick.tickEndIndex; i += axis.timeTick.tickType) {
                 x = axis.convertX(i);
                 ctx.fillText(tickList[i].format("HH:mm"), x, y);
                 for (var j = 0; j < valueAxisCount && i > 0; j++) {
                     valueAxis = axis.valueAxisList[j];
-                    ctx.drawVerticalLine(x, valueAxis.y, valueAxis.top);
+                    tickLine.addLine(x,valueAxis.y,x,valueAxis.top);
                 }
             }
+            tickLine.draw();
             ctx.fillText(axis.timeTick.endTime.format("HH:mm"), axis.convertX(i), y);
 
             ctx.restore();

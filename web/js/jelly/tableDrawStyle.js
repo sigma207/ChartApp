@@ -5,6 +5,7 @@ var FutureTableStyle = {
     VOLUME_COLOR: "lightskyblue",
     CODE_COLOR: "#ffb70a",
     DEFAULT_COLOR: "white",
+    FONT:"16px Helvetica",
     upDownColor: function (rowData) {
         if(rowData.upDown==0){
             return "#ffffff";
@@ -14,33 +15,8 @@ var FutureTableStyle = {
     },
     createNew: function (table) {
         var ds = {};
-        var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
-        var headerCtx = table.layerManager.getLayer(CanvasTable.HEADER_LAYER_INDEX).ctx;
-        var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
-
-        var valueFloatCtx = table.layerManager.getLayer(CanvasTable.VALUE_FLOAT_LAYER_INDEX).ctx;
-        var valueStationaryCtx = table.layerManager.getLayer(CanvasTable.VALUE_STATIONARY_LAYER_INDEX).ctx;
-        var headerFloatCtx = table.layerManager.getLayer(CanvasTable.HEADER_FLOAT_LAYER_INDEX).ctx;
-        var headerStationary = table.layerManager.getLayer(CanvasTable.HEADER_STATIONARY_LAYER_INDEX).ctx;
-        baseCtx.font = "16px Helvetica";
-        if (typeof headerCtx !== typeof undefined) {
-            headerCtx.font = "16px Helvetica";
-        }
-        if (typeof contentCtx !== typeof undefined) {
-            contentCtx.font = "16px Helvetica";
-        }
-
-        if (typeof valueFloatCtx !== typeof undefined) {
-            valueFloatCtx.font = "16px Helvetica";
-        }
-        if (typeof valueStationaryCtx !== typeof undefined) {
-            valueStationaryCtx.font = "16px Helvetica";
-        }
-        if (typeof headerFloatCtx !== typeof undefined) {
-            headerFloatCtx.font = "16px Helvetica";
-        }
-        if (typeof headerStationary !== typeof undefined) {
-            headerStationary.font = "16px Helvetica";
+        for(var i=0;i<table.layerManager.layerList.length;i++){
+            table.layerManager.getLayer(i).assignFont(FutureTableStyle.FONT);
         }
 
         ds.headBackground = function (ctx, x, y, width, height) {

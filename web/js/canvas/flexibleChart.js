@@ -59,37 +59,52 @@ var CanvasComponent = {
 };
 
 var Axis = {
-    createNew: function (x, y, length) {
+    createNew: function (x, y) {
         var axis = CanvasComponent.createNew();
         axis.x = x;
         axis.y = y;
-        axis.length = length;
-        axis.column = undefined;
+        //axis.updateAxisBase = function (newX, newY) {
+        //    axis.x = newX;
+        //    axis.y = newY;
+        //};
+        //axis.length = length;
+        //axis.column = undefined;
         return axis;
     }
 };
 
 var AxisX = {
     createNew: function (x, y, width) {
-        return Axis.createNew(x, y, width);
+        return Axis.createNew(x, y);
     }
 };
 
 //value volume
 var AxisY = {
-    createNew: function (x, y, height) {
-        var axis = Axis.createNew(x, y, height);
-        axis.height = height;
+    createNew: function (x, y, heightPercent) {
+        var axis = Axis.createNew(x, y);
+        axis.heightPercent = heightPercent;
+        axis.height = 0;
         axis.top = axis.y - axis.height;
         return axis;
     }
 };
 
-var ValueAxis = {
-    createNew: function (period, column, minColumn, maxColumn, decimalColumn, x, y, height) {
-        var axis = AxisY.createNew(x, y, height);
-        axis.layerManager = period.layerManager;
+var EmptyAxis = {
+    createNew: function (period, heightPercent) {
+        //var height = period.chart.area.height * heightPercent;
+        var axis = AxisY.createNew(0, 0, heightPercent);
         axis.period = period;
+
+        return axis;
+    }
+};
+
+var ValueAxis = {
+    createNew: function (period, column, minColumn, maxColumn, decimalColumn, heightPercent) {
+        var axis = EmptyAxis.createNew(period,heightPercent);
+        axis.layerManager = period.layerManager;
+        //axis.period = period;
         axis.column = column;
         axis.minColumn = minColumn;
         axis.maxColumn = maxColumn;
@@ -179,7 +194,7 @@ var TimeTick = {
                 time = moment(time).add(1, "minute");
             }
             logTimeEnd("timeTick");
-            log(tt.tickMap);
+            //log(tt.tickMap);
         };
 
         tt.getTimeTickIndex = function (time) {
@@ -198,7 +213,7 @@ var PeriodAxis = {
         axis.dataTimeFunction = dataTimeFunction;
         axis.valueAxisList = [];
         axis.axisYList = [];
-        axis.height = 0;
+        axis.totalUseHeight = 0;
         axis.currentMouseData = undefined;
         axis.currentMouseHangList = undefined;
         axis.createTimeTick = function () {
@@ -207,25 +222,37 @@ var PeriodAxis = {
         };
 
         axis.calculate = function () {
+            var area = axis.chart.area;
+            var x = area.x;
+            var y = area.y;
+            for (var i = 0; i < axis.axisYList.length; i++) {
+                var axisY = axis.axisYList[i];
+                axisY.x = x;
+                axisY.y = y;
+                axisY.height = area.height * axisY.heightPercent/100;
+                axisY.top = axisY.y-axisY.height;
+                y-=axisY.height;
+                log("axisY.height=%s,y=%s",axisY.height,axisY.y);
+            }
             axis.timeTick.calculate();
-            axis.scale = runChart.area.width / (axis.timeTick.tickDisplayCount );
+            axis.scale = area.width / (axis.timeTick.tickDisplayCount );
         };
 
-        axis.createValueAxis = function (column, minColumn, maxColumn, decimalColumn, x, y, height) {
-            var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn, decimalColumn, x, y, height);
+        axis.createValueAxis = function (column, minColumn, maxColumn, decimalColumn, heightPercent) {
+            var valueAxis = ValueAxis.createNew(axis, column, minColumn, maxColumn, decimalColumn,  heightPercent);
             axis.valueAxisList.push(valueAxis);
             axis.addAxisY(valueAxis);
             return valueAxis;
         };
 
-        axis.createAxisY = function (x, y, height) {
-            var axisY = AxisY.createNew(x, y, height);
+        axis.createEmptyAxisY = function (heightPercent) {
+            var axisY = EmptyAxis.createNew(axis, heightPercent);
             axis.addAxisY(axisY);
             return axisY;
         };
 
         axis.addAxisY = function (axisY) {
-            axis.height += axisY.height;
+            axis.totalUseHeight += axisY.height;
             axis.axisYList.push(axisY);
         };
 
@@ -252,7 +279,7 @@ var PeriodAxis = {
         axis.generateDataLoc = function () {
             var dataDriven = axis.chart.dataDriven;
             var list = dataDriven.list;
-            var data,previousData;
+            var data, previousData;
             var valueAxis;
             var valueAxisCount = axis.valueAxisList.length;
             var y;
@@ -263,14 +290,14 @@ var PeriodAxis = {
                 dataTime = axis.dataTimeFunction.call(axis, data);
                 var timeTickIndex = timeTick.getTimeTickIndex(dataTime);
                 data.x = axis.convertX(timeTickIndex);
-                if(timeTickIndex==timeTick.tickEndIndex){
+                if (timeTickIndex == timeTick.tickEndIndex) {
                     data.endX = axis.chart.area.right;
-                }else{
-                    data.endX = axis.convertX(timeTickIndex+1);
+                } else {
+                    data.endX = axis.convertX(timeTickIndex + 1);
                 }
-                if(dataDriven.dataEndIndex-dataIndex<20){
-                    log("dataTime="+dataTime+",dataIndex="+dataIndex+",timeTickIndex="+timeTickIndex+",data.x="+data.x+",data.endX="+data.endX);
-                }
+                //if(dataDriven.dataEndIndex-dataIndex<20){
+                //    log("dataTime="+dataTime+",dataIndex="+dataIndex+",timeTickIndex="+timeTickIndex+",data.x="+data.x+",data.endX="+data.endX);
+                //}
 
                 for (var v = 0; v < valueAxisCount; v++) {
                     valueAxis = axis.valueAxisList[v];
@@ -278,7 +305,7 @@ var PeriodAxis = {
                 }
                 previousData = data;
             }
-            log(list);
+            //log(list);
         };
 
         /**
@@ -287,15 +314,17 @@ var PeriodAxis = {
          * @returns {*}
          */
         axis.getDataByMouseX = function (x) {
+            //logTime("getDataByMouseX");
             var dataDriven = axis.chart.dataDriven;
             var list = dataDriven.list;
             var data, nextData;
             for (var dataIndex = dataDriven.dataStartIndex; dataIndex <= dataDriven.dataEndIndex; dataIndex++) {
                 data = list[dataIndex];
-                if (x >= data.x && x< data.endX) {
+                if (x >= data.x && x < data.endX) {
                     return data;
                 }
             }
+            //logTimeEnd("getDataByMouseX");
             return undefined;
         };
 
@@ -374,10 +403,10 @@ var RunChart = {
         chart.mouseHangCall = undefined;
 
         chart.init = function () {
-            chart.setArea();
+            chart.calculateArea();
         };
 
-        chart.setArea = function () {
+        chart.calculateArea = function () {
             chart.area.x = chart.PADDING_LEFT;
             chart.area.y = chart.canvas.height - chart.PADDING_BOTTOM;
             chart.area.right = chart.canvas.width - chart.PADDING_RIGHT;
@@ -406,7 +435,9 @@ var RunChart = {
             var valueAxis, i;
             var now = new Date().getTime();
 
+
             if (chart.timePeriodChange) {
+                log("periodAxis.calculate()");
                 periodAxis.calculate();
                 chart.timePeriodChange = false;
             }
@@ -456,13 +487,7 @@ var RunChart = {
                                 chart.mouseHangCall.call(chart, periodAxis.currentMouseData);
                             }
                         }
-                        //if(typeof periodAxis.currentMouseData !== typeof undefined){
-                        //    chart.renderMouse = true;
-                        //}
-
                     }
-
-
                 } else {
                     chart.renderMouse = false;
                 }
@@ -499,27 +524,28 @@ var RunChart = {
             }
 
             if (chart.renderPeriodTick) {
-                logTime("renderPeriodTick");
+                log("chart.renderPeriodTick");
+                //logTime("renderPeriodTick");
 
-                logTime("generateDataLoc");
+                //logTime("generateDataLoc");
                 periodAxis.generateDataLoc();
-                logTimeEnd("generateDataLoc");
+                //logTimeEnd("generateDataLoc");
 
                 chart.layerManager.clearLayer(1);
 
-                logTime(" periodAxis.drawChartLayer(1)");
+                //logTime(" periodAxis.drawChartLayer(1)");
                 periodAxis.drawChartLayer(1);
-                logTimeEnd(" periodAxis.drawChartLayer(1)");
+                //logTimeEnd(" periodAxis.drawChartLayer(1)");
 
-                logTime("valueAxis.drawChartLayer(1)");
+                //logTime("valueAxis.drawChartLayer(1)");
                 for (i = 0; i < periodAxis.valueAxisList.length; i++) {
                     valueAxis = periodAxis.valueAxisList[i];
                     valueAxis.drawChartLayer(1);
                 }
-                logTimeEnd("valueAxis.drawChartLayer(1)");
+                //logTimeEnd("valueAxis.drawChartLayer(1)");
 
                 chart.renderPeriodTick = false;
-                logTimeEnd("renderPeriodTick");
+                //logTimeEnd("renderPeriodTick");
             }
 
             if (chart.renderMouse) {
@@ -552,6 +578,16 @@ var RunChart = {
         chart.getCurrentMouseData = function () {
             return chart.periodAxis.currentMouseData;
         };
+
+        chart.resizeCall = function () {
+            chart.calculateArea();
+            chart.renderBackground = true;
+            chart.timePeriodChange = true;
+            chart.dataDrivenChange = true;
+            chart.renderPeriodTick = true;
+        };
+
+        chart.layerManager.resizeCall = chart.resizeCall;
 
         return chart;
     }

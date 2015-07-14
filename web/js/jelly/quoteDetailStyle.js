@@ -3,6 +3,7 @@
  */
 var QuoteDetailStyle = {
     DEFAULT_COLOR: "white",
+    FONT:"12px Helvetica",
     upDownColor: function (rowData) {
         if (rowData.upDown == 0) {
             return "#ffffff";
@@ -12,15 +13,8 @@ var QuoteDetailStyle = {
     },
     createNew: function (table) {
         var ds = {};
-        var baseCtx = table.layerManager.getLayer(CanvasTable.BASE_LAYER_INDEX).ctx;
-        var headerCtx = table.layerManager.getLayer(CanvasTable.HEADER_LAYER_INDEX).ctx;
-        var contentCtx = table.layerManager.getLayer(CanvasTable.VALUE_LAYER_INDEX).ctx;
-        baseCtx.font = "12px Helvetica";
-        if (typeof headerCtx !== typeof undefined) {
-            headerCtx.font = "12px Helvetica";
-        }
-        if (typeof contentCtx !== typeof undefined) {
-            contentCtx.font = "12px Helvetica";
+        for(var i=0;i<table.layerManager.layerList.length;i++){
+            table.layerManager.getLayer(i).assignFont(QuoteDetailStyle.FONT);
         }
 
         ds.headBackground = function (ctx, x, y, width, height) {
